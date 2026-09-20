@@ -29,12 +29,17 @@ interface TaskRepository {
     suspend fun complete(id: Long, expectedRevision: Int? = null): CompleteResult
 
     /**
-     * Reopens the task and removes the generated successor if it is still open. Guarded by the revision the
-     * completion produced, so a replayed/obsolete token is a no-op (returns false) and never duplicates a series.
+     * Reopens the task and removes the generated successor. Guarded by the revision the completion produced, so
+     * a replayed/obsolete token is a no-op (returns false); also a no-op if the generated successor is no longer
+     * open (already completed or deleted), because reopening would then fork the series into two open branches.
      */
     suspend fun undoComplete(result: CompleteResult): Boolean
 
-    /** Reopens a completed task (from Completadas). Returns false if it was not completed. */
+    /**
+     * Reopens a completed task (from Completadas). Returns false if it was not completed, and ALWAYS false for an
+     * occurrence of a recurring task: its successor already carries the series forward and there is no lineage to
+     * find it, so a reopen could leave two open occurrences (GB-04). Undo right after completing is the way back.
+     */
     suspend fun reopen(id: Long): Boolean
 
     /** Moves the task to tomorrow. Null if the task is missing or done. */

@@ -19,7 +19,15 @@ class FakeScheduler(private val log: EventLog = EventLog()) : ReminderScheduler 
     val arms = mutableListOf<Instant>()
     var cancels = 0
 
+    /** The next N arm calls throw (AlarmManager binder failure), then behave normally. */
+    var armFailures = 0
+
     override fun arm(at: Instant) {
+        if (armFailures > 0) {
+            armFailures--
+            log += "arm-failed"
+            throw IllegalStateException("AlarmManager unavailable")
+        }
         armed = at
         arms += at
         log += "arm:$at"
@@ -60,7 +68,12 @@ class FakeNotifier(private val log: EventLog = EventLog()) : ReminderNotifier {
         log += "cancel-all"
     }
 
-    override fun activeCards() = cards.toList()
+    var failActiveCards: Throwable? = null
+
+    override fun activeCards(): List<ActiveCard> {
+        failActiveCards?.let { throw it }
+        return cards.toList()
+    }
 }
 
 /** Same semantics as the SQL in TaskDao (revision-guarded), for pure-JVM reconciler tests. */
@@ -69,7 +82,16 @@ class FakeReminderStore(private val log: EventLog = EventLog()) : ReminderStore 
 
     fun put(task: Task) { tasks[task.id] = task }
 
-    override suspend fun candidates() = tasks.values.filter {
+    var candidateReads = 0
+    var failCandidates: Exception? = null
+
+    override suspend fun candidates(): List<Task> {
+        candidateReads++
+        failCandidates?.let { throw it }
+        return readCandidates()
+    }
+
+    private fun readCandidates() = tasks.values.filter {
         !it.done && it.reminderEnabled && it.dueDate != null && it.dueTime != null
     }
 
@@ -85,7 +107,9 @@ class FakeReminderStore(private val log: EventLog = EventLog()) : ReminderStore 
 
     override suspend fun snoozeIfDelivered(taskId: Long, revision: Int, until: Instant): Boolean {
         val t = tasks[taskId] ?: return false
-        if (t.reminderRevision != revision || t.done || !t.reminderEnabled || t.reminderFiredAt == null) return false
+        if (t.reminderRevision != revision || t.done || !t.reminderEnabled || t.reminderFiredAt == null ||
+            t.reminderSnoozeUntil != null
+        ) return false
         tasks[taskId] = t.copy(reminderSnoozeUntil = until)
         return true
     }

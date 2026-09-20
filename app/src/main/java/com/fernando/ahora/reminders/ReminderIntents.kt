@@ -5,7 +5,9 @@ import android.net.Uri
 /** Deep links (explicit intents only; NO manifest intent-filter for this scheme — D-13). */
 sealed interface AppLink {
     data object Home : AppLink
-    data class Focus(val taskId: Long) : AppLink
+
+    /** [revision] is the schedule revision of the notification that opened it (ABRIR); null for other entries. */
+    data class Focus(val taskId: Long, val revision: Int? = null) : AppLink
 }
 
 object AppLinks {
@@ -14,16 +16,27 @@ object AppLinks {
     private const val HOST_FOCUS = "focus"
 
     fun homeUri(): Uri = Uri.Builder().scheme(SCHEME).authority(HOST_HOME).build()
-    fun focusUri(taskId: Long): Uri = Uri.Builder().scheme(SCHEME).authority(HOST_FOCUS).appendPath(taskId.toString()).build()
+    private const val PARAM_REVISION = "rev"
 
-    fun parse(uri: Uri?): AppLink? = uri?.let { parse(it.scheme, it.host, it.pathSegments.orEmpty()) }
+    /** With [revision], every schedule revision gets its own PendingIntent identity and only its own card is dismissed. */
+    fun focusUri(taskId: Long, revision: Int? = null): Uri =
+        Uri.Builder().scheme(SCHEME).authority(HOST_FOCUS).appendPath(taskId.toString())
+            .apply { if (revision != null) appendQueryParameter(PARAM_REVISION, revision.toString()) }
+            .build()
+
+    fun parse(uri: Uri?): AppLink? =
+        uri?.let { parse(it.scheme, it.host, it.pathSegments.orEmpty(), it.getQueryParameter(PARAM_REVISION)) }
 
     /** Pure and total: anything unrecognised or malformed is null (validated before navigation). */
-    fun parse(scheme: String?, host: String?, pathSegments: List<String>): AppLink? {
+    fun parse(scheme: String?, host: String?, pathSegments: List<String>, revision: String? = null): AppLink? {
         if (scheme != SCHEME) return null
         return when (host) {
-            HOST_HOME -> if (pathSegments.isEmpty()) AppLink.Home else null
-            HOST_FOCUS -> pathSegments.singleOrNull()?.toLongOrNull()?.takeIf { it > 0 }?.let(AppLink::Focus)
+            HOST_HOME -> if (pathSegments.isEmpty() && revision == null) AppLink.Home else null
+            HOST_FOCUS -> {
+                val id = pathSegments.singleOrNull()?.toLongOrNull()?.takeIf { it > 0 } ?: return null
+                val rev = if (revision == null) null else revision.toIntOrNull()?.takeIf { it >= 0 } ?: return null
+                AppLink.Focus(id, rev)
+            }
             else -> null
         }
     }

@@ -120,8 +120,8 @@ Indices: `(done, dueDate)`, `(done, priority)`. Invariants (PRODUCT_SPEC §4.1) 
 |---|---|
 | `create/save(draft)` | validate → normalise (§4.1 rules) → reset reminder state if date/time/toggle changed → if resulting fire instant ≤ now set `reminderFiredAt = now` → upsert |
 | `complete(id)` | **no-op if already done** → set done/completedAt, clear snooze → if recurring insert successor (new row) → return `CompletionResult(successorId?)` |
-| `undoComplete(id, successorId?)` | reopen + delete successor if it is still open |
-| `reopen(id)` | done=false; if fire instant past ⇒ mark consumed |
+| `undoComplete(id, successorId?)` | reopen + delete successor; **refuses if the successor is no longer open (GB-04)** |
+| `reopen(id)` | done=false; if fire instant past ⇒ mark consumed. **Always refused for recurring rows (GB-04, D-31)** |
 | `postpone(id)` | `dueDate = today+1` (zone at call time), reset reminder state |
 | `delete(id)` / `undoDelete(task)` | delete / re-insert with the same id |
 | `snoozeIfDelivered(id, now)` *(ReminderStateStore, trigger-free)* | `reminderSnoozeUntil = now + 10 min` only if `!done ∧ reminderEnabled ∧ reminderFiredAt != null`; otherwise no-op |
@@ -277,7 +277,7 @@ Missed-reminder policy: **≤ 12 h late ⇒ deliver once; older ⇒ mark consume
 | Content intent | `PendingIntent.getActivity` with an **explicit `ahora://home` deep-link intent** (`FLAG_ACTIVITY_NEW_TASK`), handled for cold **and** warm starts (`onNewIntent`) by navigating to `Home` with `popUpTo(Home)`. A plain launcher intent is not enough: when the `singleTop` activity is already on Tareas/Ajustes/Foco it would only deliver `onNewIntent` and leave the user where they were. |
 | **HECHO** | `PendingIntent.getBroadcast` → `ReminderActionReceiver`, action + `data = ahora://reminder/{id}/done`, immutable. Completes via repository (idempotent), cancels notification, re-plans. **Never starts an activity** (Android 12+ trampoline restriction). |
 | **+10 MIN** | Broadcast, `…/snooze`. Sets snooze, cancels notification, re-plans. |
-| **ABRIR** | **Direct** `PendingIntent.getActivity` (never via a receiver) with the Foco deep-link intent; Foco entry cancels the notification. |
+| **ABRIR** | **Direct** `PendingIntent.getActivity` (never via a receiver) with the Foco deep-link intent `ahora://focus/{id}?rev={revision}` (a per-revision identity, GB-07). `NotificationLinkHandler` validates it (missing/done ⇒ Home) and cancels the card **only if the tray card's revision equals `rev`**. |
 | PendingIntent identity | Unique `data` URI per task+action so `filterEquals` distinguishes them; all `FLAG_IMMUTABLE`. |
 | Grouping | None; the system auto-bundles. |
 
@@ -423,3 +423,21 @@ Source: review #2 findings A2-01…A2-13, triaged in DECISIONS.md › "Codex rev
 | 19 | Revoke notification permission while a reminder card is visible |
 | 20 | Notification body tap: cold, and warm from Home / Inbox / Tasks / Settings / Foco |
 | 21 | Kill the process right after HECHO / +10 MIN commit (cold receiver) |
+
+## 18. Amendments from Codex Gate B (normative — supersede earlier text where they conflict)
+
+Source: Gate B findings GB-01…GB-07, triaged in DECISIONS.md › "Gate B — Codex code review of the reminder engine".
+
+**GB-01 Actions dismiss only their own card.** HECHO / +10 MIN / ABRIR never cancel a notification by task id alone. A no-op action (stale revision, duplicate, task gone) cancels the tray card **only if its revision equals the action's**; a successful action cancels as before. A delayed action from revision N can therefore never remove the valid card of revision N+1 (which Room already records as delivered and which could never be re-posted). Every no-op action still runs a reconcile so the sweep heals leftovers.
+
+**GB-02 Phase 1 cannot strand the cursor; the sweep cannot delay it.** §10.4 is amended: (1) the candidate read is cancellable; if it fails, is cut short by the receiver timeout, or the real arm throws, a 60 s emergency cursor is armed (best effort, non-cancellable, no I/O) before the failure propagates; (2) the real next cursor is settled **before** the tray sweep, and the sweep is cancellable, so a timeout during the sweep costs nothing. The arm calls themselves stay non-cancellable and I/O-free.
+
+**GB-03 Imported revisions are bounded.** `TaskRules.MAX_IMPORT_REVISION` (10⁹) is enforced by `validateForImport`; `replaceAll` no longer wraps a revision back to a small value that a stale action could match.
+
+**GB-04 A recurring series never forks.** `reopen` is always refused for a recurring occurrence; `undoComplete` refuses when the successor it generated is no longer open. Without persistent series lineage (a `seriesId`) those are the only ways to guarantee "at most one open occurrence per series". See D-31 for the deferred lineage option.
+
+**GB-05 `request()` is genuinely conflated.** While a pass is queued behind the mutex, further requests share it; a request during a running pass queues exactly one follow-up. A storm costs ≤ 2 passes.
+
+**GB-06 +10 MIN cannot re-snooze.** `snoozeIfDelivered` also requires `reminderSnoozeUntil IS NULL`, so a duplicated/delayed tap cannot push a pending snooze further out. (Rejected: bumping the revision on snooze — the harm is milliseconds, and a bump would invalidate legitimate actions.)
+
+**GB-07 Notification entry points (engine half).** `MainActivity` forwards `intent.data` on cold start (`savedInstanceState == null`) and warm start (`addOnNewIntentListener`) to `NotificationLinkHandler`, which returns a validated `LinkDestination` (`Home` / `Focus(id)`), cancelling the matching ABRIR card. **The navigation host that consumes the destination and builds `[Home, Focus]` is still M3 work** (A7 remains unverified).

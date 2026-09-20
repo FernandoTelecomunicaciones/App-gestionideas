@@ -102,7 +102,7 @@ class AndroidReminderNotifier @Inject constructor(
             .setContentIntent(activityIntent(AppLinks.homeUri()))
             .addAction(0, context.getString(R.string.notif_action_done), broadcast(task, ReminderIntents.ACTION_DONE))
             .addAction(0, context.getString(R.string.notif_action_snooze), broadcast(task, ReminderIntents.ACTION_SNOOZE))
-            .addAction(0, context.getString(R.string.notif_action_open), activityIntent(AppLinks.focusUri(task.id)))
+            .addAction(0, context.getString(R.string.notif_action_open), activityIntent(AppLinks.focusUri(task.id, task.reminderRevision)))
             .build()
     }
 

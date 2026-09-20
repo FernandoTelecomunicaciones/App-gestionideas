@@ -11,6 +11,13 @@ object TaskRules {
     val ALLOWED_ESTIMATES: Set<Int> = setOf(15, 30, 60, 120)
 
     /**
+     * Upper bound for an imported schedule revision. Revisions grow by one per schedule edit, so a real export
+     * never comes near this; the bound keeps `revision + 1` (import, GA-02) from ever wrapping to a value a
+     * stale notification action could match (GB-03).
+     */
+    const val MAX_IMPORT_REVISION: Int = 1_000_000_000
+
+    /**
      * Returns the normalised fields, or null when the title is blank (the only hard requirement).
      * Dependent fields are cleared rather than rejected: time requires a date, a reminder requires a
      * time, recurrence requires a date. Optional fields never produce errors.
@@ -55,6 +62,7 @@ object TaskRules {
             if (t.estimatedMinutes != null && t.estimatedMinutes !in ALLOWED_ESTIMATES) problems += "$who: estimate not allowed"
             if (t.done != (t.completedAt != null)) problems += "$who: done/completedAt mismatch"
             if (t.reminderRevision < 0) problems += "$who: negative revision"
+            if (t.reminderRevision > MAX_IMPORT_REVISION) problems += "$who: revision out of range"
             if (t.listName != null && t.listName.isBlank()) problems += "$who: blank list"
         }
         return problems

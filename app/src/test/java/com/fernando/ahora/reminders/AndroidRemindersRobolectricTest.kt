@@ -130,7 +130,13 @@ class AndroidRemindersRobolectricTest {
         val n = notifier.build(reminderTask(42))
         val intent = shadowOf(n.actions[2].actionIntent).savedIntent
         assertEquals(MainActivity::class.java.name, intent.component!!.className) // explicit, never implicit
-        assertEquals("ahora://focus/42", intent.data.toString())
+        assertEquals("ahora://focus/42?rev=0", intent.data.toString()) // revision-aware identity (GB-07)
+    }
+
+    @Test
+    fun abrir_isUniquePerRevision_soAnOldCardCannotDismissANewerOne() {
+        fun abrirOf(rev: Int) = shadowOf(notifier.build(reminderTask(42, rev)).actions[2].actionIntent).savedIntent.data.toString()
+        assertNotEquals(abrirOf(0), abrirOf(1))
     }
 
     @Test
@@ -197,6 +203,10 @@ class AndroidRemindersRobolectricTest {
     fun appLinks_parseOnlyTheApprovedShapes() {
         assertEquals(AppLink.Home, AppLinks.parse(Uri.parse("ahora://home")))
         assertEquals(AppLink.Focus(42), AppLinks.parse(Uri.parse("ahora://focus/42")))
+        assertEquals(AppLink.Focus(42, 3), AppLinks.parse(Uri.parse("ahora://focus/42?rev=3")))
+        assertNull(AppLinks.parse(Uri.parse("ahora://focus/42?rev=abc")))
+        assertNull(AppLinks.parse(Uri.parse("ahora://focus/42?rev=-1")))
+        assertNull(AppLinks.parse(Uri.parse("ahora://home?rev=1")))
         assertNull(AppLinks.parse(Uri.parse("ahora://focus/0")))
         assertNull(AppLinks.parse(Uri.parse("ahora://focus/-3")))
         assertNull(AppLinks.parse(Uri.parse("ahora://focus/abc")))

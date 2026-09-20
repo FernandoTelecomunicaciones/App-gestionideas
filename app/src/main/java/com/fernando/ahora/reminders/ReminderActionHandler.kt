@@ -8,9 +8,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * HECHO and +10 MIN, testable without a BroadcastReceiver. Both are idempotent, both validate the schedule
- * revision the card was posted for (a stale card can never overwrite a newer schedule), and both ALWAYS
- * dismiss the card (PRODUCT_SPEC NTF-08). Callers await this inside `goAsync()` (ARCHITECTURE R2-3).
+ * HECHO and +10 MIN, testable without a BroadcastReceiver. Both are idempotent and both validate the schedule
+ * revision the card was posted for, so a stale card can never overwrite a newer schedule.
+ *
+ * A no-op action (stale, duplicate, task gone) dismisses only ITS OWN card — the one in the tray whose
+ * revision equals the action's. It must never cancel by task id alone: a delayed action from revision N
+ * could otherwise remove the valid card of revision N+1, which Room already records as delivered and which
+ * therefore could never be posted again (GB-01). The remaining check-then-cancel window is microseconds,
+ * and the reconcile sweep after each action heals anything left over.
+ *
+ * Callers await this inside `goAsync()` (ARCHITECTURE R2-3).
  */
 @Singleton
 class ReminderActionHandler @Inject constructor(
@@ -22,14 +29,23 @@ class ReminderActionHandler @Inject constructor(
 ) {
     /** Completes only if the task is open AND still at [revision]; the repository awaits the re-plan. */
     suspend fun done(taskId: Long, revision: Int) {
-        repository.complete(taskId, expectedRevision = revision)
-        notifier.cancel(taskId)
+        val result = repository.complete(taskId, expectedRevision = revision)
+        if (result.completed) {
+            notifier.cancel(taskId) // the repository already cancelled it; harmless and explicit
+        } else {
+            dismissOwnCard(taskId, revision)
+            reconciler.reconcileNow("action-noop")
+        }
     }
 
-    /** Snoozes only a reminder that actually fired for this exact schedule; then re-plans. */
+    /** Snoozes only a reminder that fired for this exact schedule and is not already snoozed; then re-plans. */
     suspend fun snooze(taskId: Long, revision: Int) {
-        store.snoozeIfDelivered(taskId, revision, time.now().plus(ReminderPlanner.SNOOZE))
-        notifier.cancel(taskId)
-        reconciler.reconcileNow("snooze")
+        val snoozed = store.snoozeIfDelivered(taskId, revision, time.now().plus(ReminderPlanner.SNOOZE))
+        if (snoozed) notifier.cancel(taskId) else dismissOwnCard(taskId, revision)
+        reconciler.reconcileNow(if (snoozed) "snooze" else "action-noop")
+    }
+
+    private fun dismissOwnCard(taskId: Long, revision: Int) {
+        if (notifier.activeCards().any { it.taskId == taskId && it.revision == revision }) notifier.cancel(taskId)
     }
 }

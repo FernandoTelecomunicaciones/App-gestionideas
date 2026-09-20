@@ -159,7 +159,7 @@ UI consequence `[G]`: picking a time with no date auto-selects the date (**Hoy**
 | TSK-02 | Row = checkbox · title 14 sp · date label 11 sp · priority tag. Row tap → edit; checkbox → complete. |
 | TSK-03 | The last selected filter is persisted (DataStore) and restored. `[D]` (Spec §12) |
 | TSK-04 | Search is case- **and accent-insensitive** over title and notes (typing "camion" finds "Camión"). Debounced ≤ 150 ms. Applies within the active filter. `[X]` (Prototype: plain `toLowerCase().includes()` on title only) |
-| TSK-05 | **Completadas**: a discreet text link (not a section, not a chip) switches the list to completed tasks, newest-completed first; tapping a checkbox reopens the task (§6.3). A text link "Pendientes" returns. `[G]` |
+| TSK-05 | **Completadas**: a discreet text link (not a section, not a chip) switches the list to completed tasks, newest-completed first; tapping a checkbox reopens the task (§6.3) — except occurrences of recurring tasks, whose checkbox is not actionable there (D-31). A text link "Pendientes" returns. `[G]` |
 | TSK-06 | Empty result copy `[G]`, **PROVISIONAL**: "Nada coincide." |
 
 **Filter semantics** `[G]` (Prototype-faithful):
@@ -268,7 +268,7 @@ Rationale: priority first (what matters), then how soon. Inbox items are never A
 4. Re-plan reminders (ARCHITECTURE §10).
 5. UI: Snackbar **"Tarea completada"** with **Deshacer** `[G]` (Spec allows one action; 22 dp checkboxes are easy to mis-tap). Undo reopens the task **and removes the generated next occurrence**.
 
-**Reopen** (from Completadas): `done = false`, `completedAt = null`. If its reminder instant is already past, the reminder is marked consumed (no retroactive notification).
+**Reopen** (from Completadas): `done = false`, `completedAt = null`. If its reminder instant is already past, the reminder is marked consumed (no retroactive notification). **A completed occurrence of a *recurring* task cannot be reopened** (its next occurrence already carries the series forward and reopening would leave two open occurrences — Gate B GB-04, DECISIONS D-31); the way back is **Deshacer** right after completing, which removes the generated occurrence. If that occurrence has meanwhile been completed or deleted, Deshacer does nothing.
 
 ### 6.4 Postponing
 

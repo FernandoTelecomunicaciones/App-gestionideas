@@ -11,7 +11,9 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -52,14 +54,31 @@ class ReminderReconciler @Inject constructor(
     internal var nanoClock: () -> Long = System::nanoTime
     internal var deliveryBudget: Duration = Duration.ofSeconds(6)
 
-    /** Fire-and-forget trigger for callers that do not need to wait. Never call this and then block on it inside a reconcile. */
-    fun request(reason: String): Job = appScope.launch {
-        try {
-            reconcileNow(reason)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "reconcile($reason) failed", e)
+    private val requestLock = Any()
+    private var queued: Job? = null
+
+    /**
+     * Fire-and-forget, CONFLATED trigger for callers that do not need to wait. While a pass is queued behind the
+     * mutex, further requests share it (that pass reads Room only after it acquires the lock, so it sees their
+     * changes); a request made while a pass is running queues exactly one follow-up. A storm therefore costs at
+     * most two passes, never N (GB-05). Never call this and then block on it inside a reconcile.
+     */
+    fun request(reason: String): Job = synchronized(requestLock) {
+        queued ?: appScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                mutex.withLock {
+                    synchronized(requestLock) { queued = null } // anything requested from here on needs a fresh pass
+                    runPass(reason)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "reconcile($reason) failed", e)
+            }
+        }.also { job ->
+            queued = job
+            job.invokeOnCompletion { synchronized(requestLock) { if (queued === job) queued = null } }
+            job.start()
         }
     }
 
@@ -77,24 +96,37 @@ class ReminderReconciler @Inject constructor(
     private data class Fire(val task: Task, val at: Instant)
 
     /** Suspends until the cursor is armed and due items were processed (or the budget ran out). */
-    suspend fun reconcileNow(reason: String) = mutex.withLock {
+    suspend fun reconcileNow(reason: String) = mutex.withLock { runPass(reason) }
+
+    /** Must run under [mutex]. */
+    private suspend fun runPass(reason: String) {
         val startedAt = nanoClock()
         val now = time.now()
         val zone = time.zone()
 
-        // Phase 1 — read + ARM. Non-cancellable and fast: a receiver timeout can never skip it.
-        val plan = withContext(NonCancellable) {
+        // Phase 1 — read + ARM. The read is cancellable; if it fails, stalls into the receiver timeout or the
+        // arm itself throws, a short retry cursor is installed first so the alarm that just fired can never
+        // leave pending work with no cursor (GB-02). The arm calls are non-cancellable and do no I/O.
+        val plan = try {
             val fires = store.candidates().mapNotNull { t -> ReminderPlanner.nextFire(t, zone)?.let { Fire(t, it) } }
             val (due, future) = fires.partition { ReminderPlanner.isDue(it.at, now) }
             val next = future.minOfOrNull { it.at }
-            if (due.isEmpty()) {
-                armOrCancel(next)
-            } else {
-                // While undelivered work exists the cursor is a short retry; the real next cursor is set at the end.
-                val retry = now.plus(RETRY_DELAY)
-                scheduler.arm(if (next != null && next.isBefore(retry)) next else retry)
+            withContext(NonCancellable) {
+                if (due.isEmpty()) {
+                    armOrCancel(next)
+                } else {
+                    // While undelivered work exists the cursor is a short retry; the real next cursor is set at the end.
+                    val retry = now.plus(RETRY_DELAY)
+                    scheduler.arm(if (next != null && next.isBefore(retry)) next else retry)
+                }
             }
             Plan(due.sortedBy { it.at }, next)
+        } catch (e: Throwable) {
+            withContext(NonCancellable) {
+                runCatching { scheduler.arm(now.plus(RETRY_DELAY)) }
+                    .onFailure { Log.e(TAG, "could not install the emergency cursor", it) }
+            }
+            throw e
         }
 
         // Phase 2 — deliver, item by item, bounded by the budget.
@@ -107,10 +139,15 @@ class ReminderReconciler @Inject constructor(
             if (!deliver(item, now)) unfinished = true
         }
 
-        // Phase 3 — sweep the tray against Room, then settle the cursor.
-        withContext(NonCancellable) {
-            runCatching { sweep() }.onFailure { Log.w(TAG, "sweep failed", it) }
-            if (plan.due.isNotEmpty() && !unfinished) armOrCancel(plan.next)
+        // Phase 3 — settle the cursor FIRST (no I/O, non-cancellable), then sweep the tray (a safety net that may
+        // be cut short by the receiver timeout without consequence).
+        if (plan.due.isNotEmpty() && !unfinished) withContext(NonCancellable) { armOrCancel(plan.next) }
+        try {
+            sweep()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "sweep failed", e)
         }
         Log.d(TAG, "reconcile($reason): due=${plan.due.size} unfinished=$unfinished next=${plan.next}")
     }

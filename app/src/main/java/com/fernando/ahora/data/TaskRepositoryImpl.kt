@@ -147,11 +147,15 @@ internal class TaskRepositoryImpl @Inject constructor(
             if (row == null || !row.done || row.reminderRevision != result.revisionAfter) {
                 return@withTransaction false
             }
-            reopenInTransaction(result.taskId, c)
-            result.successorId?.let { sid ->
-                val successor = dao.getById(sid)
-                if (successor != null && !successor.done) dao.deleteById(sid)
+            // GB-04: the undo removes the occurrence it generated. If that successor was already completed (or
+            // deleted), the series has moved on; reopening this occurrence would fork it into two open branches.
+            val successorId = result.successorId
+            if (successorId != null) {
+                val successor = dao.getById(successorId)
+                if (successor == null || successor.done) return@withTransaction false
+                dao.deleteById(successorId)
             }
+            reopenInTransaction(result.taskId, c)
             true
         }
         if (undone) reminderSync.onTasksChanged(setOfNotNull(result.taskId, result.successorId), "undoComplete")
@@ -160,7 +164,14 @@ internal class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun reopen(id: Long): Boolean {
         val c = clock()
-        val reopened = db.withTransaction { reopenInTransaction(id, c) }
+        val reopened = db.withTransaction {
+            // GB-04: a completed occurrence of a recurring task has (or had) a successor and there is no series
+            // lineage to find it, so reopening could leave two open occurrences. History is immutable; the way
+            // back is `undoComplete`, which removes the successor it created.
+            val row = dao.getById(id)
+            if (row != null && Recurrence.fromCode(row.recurrence) != Recurrence.NONE) return@withTransaction false
+            reopenInTransaction(id, c)
+        }
         if (reopened) reminderSync.onTasksChanged(setOf(id), "reopen")
         return reopened
     }
@@ -255,8 +266,9 @@ internal class TaskRepositoryImpl @Inject constructor(
             dao.deleteAll()
             dao.insertAll(
                 tasks.map { t ->
+                    // validateForImport bounds imported revisions (GB-03), so this never wraps.
                     val base = maxOf(t.reminderRevision, oldRevisions[t.id] ?: -1)
-                    t.copy(reminderRevision = if (base == Int.MAX_VALUE) 0 else base + 1).toEntity()
+                    t.copy(reminderRevision = base + 1).toEntity()
                 },
             )
         }

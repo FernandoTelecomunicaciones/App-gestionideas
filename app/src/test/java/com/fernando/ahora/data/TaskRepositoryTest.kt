@@ -11,6 +11,7 @@ import com.fernando.ahora.domain.model.Priority
 import com.fernando.ahora.domain.model.Recurrence
 import com.fernando.ahora.domain.model.ReplaceResult
 import com.fernando.ahora.domain.model.TaskFields
+import com.fernando.ahora.domain.rules.TaskRules
 import com.fernando.ahora.testing.FakeTimeProvider
 import com.fernando.ahora.testing.RecordingReminderSync
 import com.fernando.ahora.testing.aTask
@@ -282,12 +283,40 @@ class TaskRepositoryTest {
     }
 
     @Test
-    fun undoComplete_keepsASuccessorThatWasAlreadyCompleted() = run {
+    fun undoComplete_afterTheSuccessorWasCompleted_isANoOp_soTheSeriesNeverForks_GB04() = run {
         val id = repo.create(TaskFields("x", dueDate = today, recurrence = Recurrence.DAILY))!!
         val r = repo.complete(id)
-        repo.complete(r.successorId!!) // user finished the next one too
-        repo.undoComplete(r)
+        val second = repo.complete(r.successorId!!) // user finished the next one too -> S2 is open
+        assertFalse("the series has moved on: undo must refuse", repo.undoComplete(r))
+        assertTrue(repo.get(id)!!.done)
         assertTrue(repo.get(r.successorId!!)!!.done)
+        val open = repo.exportAll().filter { !it.done }
+        assertEquals("exactly one open occurrence", listOf(second.successorId), open.map { it.id })
+    }
+
+    @Test
+    fun undoComplete_afterTheSuccessorWasDeleted_isANoOp_GB04() = run {
+        val id = repo.create(TaskFields("x", dueDate = today, recurrence = Recurrence.DAILY))!!
+        val r = repo.complete(id)
+        repo.delete(r.successorId!!) // ends the series (D-16)
+        assertFalse(repo.undoComplete(r))
+        assertTrue(repo.get(id)!!.done)
+        assertTrue(repo.exportAll().none { !it.done })
+    }
+
+    @Test
+    fun reopen_ofARecurringOccurrence_isRefused_soTwoOpenOccurrencesCanNeverExist_GB04() = run {
+        val id = repo.create(TaskFields("x", dueDate = today, recurrence = Recurrence.WEEKLY))!!
+        val r = repo.complete(id)
+        assertFalse(repo.reopen(id))
+        assertTrue(repo.get(id)!!.done)
+        assertEquals(listOf(r.successorId), repo.exportAll().filter { !it.done }.map { it.id })
+        // ...even for an occurrence whose successor is itself done (a chain A -> S1 -> S2)
+        val s1 = r.successorId!!
+        repo.complete(s1)
+        assertFalse(repo.reopen(id))
+        assertFalse(repo.reopen(s1))
+        assertEquals(1, repo.exportAll().count { !it.done })
     }
 
     @Test
@@ -451,6 +480,19 @@ class TaskRepositoryTest {
     }
 
     @Test
+    fun replaceAll_neverWrapsARevisionBackToTheDisplacedRowsValue_GB03() = run {
+        // a stale HECHO for revision 0 exists for id 7; the import brings the LARGEST accepted revision for id 7
+        val id = repo.create(TaskFields("old", dueDate = tomorrow, dueTime = LocalTime.of(9, 0), reminderEnabled = true))!!
+        assertEquals(0, repo.get(id)!!.reminderRevision)
+        val imported = aTask(id, "imported", dueDate = tomorrow, dueTime = LocalTime.of(8, 0), reminderEnabled = true)
+            .copy(reminderRevision = TaskRules.MAX_IMPORT_REVISION, reminderFiredAt = time.instant)
+        assertEquals(ReplaceResult.Replaced(1), repo.replaceAll(listOf(imported)))
+        assertEquals(TaskRules.MAX_IMPORT_REVISION + 1, repo.get(id)!!.reminderRevision)
+        assertFalse("the stale revision-0 action stays inert", repo.complete(id, expectedRevision = 0).completed)
+        assertFalse(store.snoozeIfDelivered(id, 0, time.instant.plusSeconds(600)))
+    }
+
+    @Test
     fun replaceAll_rejectsTheWholeImport_andLeavesCurrentDataUntouched_GA03() = run {
         val keep = repo.create(TaskFields("keep me"))!!
         val bad = listOf(
@@ -469,6 +511,8 @@ class TaskRepositoryTest {
             listOf(aTask(10, "completedAt without done").copy(completedAt = time.instant)),
             listOf(aTask(10, "seconds", dueDate = tomorrow, dueTime = LocalTime.of(9, 30, 30))),
             listOf(aTask(10, "negative revision").copy(reminderRevision = -1)),
+            listOf(aTask(10, "exhausted revision").copy(reminderRevision = Int.MAX_VALUE)),
+            listOf(aTask(10, "revision beyond bound").copy(reminderRevision = TaskRules.MAX_IMPORT_REVISION + 1)),
         )
         for (import in bad) {
             val r = repo.replaceAll(import)
@@ -625,6 +669,19 @@ class TaskRepositoryTest {
         assertTrue(store.markDelivered(id, 0, time.instant))
         assertTrue(store.snoozeIfDelivered(id, 0, until))
         assertEquals(until, repo.get(id)!!.reminderSnoozeUntil)
+    }
+
+    @Test
+    fun snoozeIfDelivered_isANoOpWhileASnoozeIsAlreadyPending_GB06() = run {
+        val id = repo.create(TaskFields("x", dueDate = tomorrow, dueTime = LocalTime.of(9, 0), reminderEnabled = true))!!
+        val first = time.instant.plusSeconds(600)
+        store.markDelivered(id, 0, time.instant)
+        assertTrue(store.snoozeIfDelivered(id, 0, first))
+        assertFalse("a duplicated +10 MIN must not push it further", store.snoozeIfDelivered(id, 0, first.plusSeconds(900)))
+        assertEquals(first, repo.get(id)!!.reminderSnoozeUntil)
+        // once the snooze has fired (mark clears it) a new card's +10 MIN works again
+        store.markDelivered(id, 0, first)
+        assertTrue(store.snoozeIfDelivered(id, 0, first.plusSeconds(600)))
     }
 
     @Test

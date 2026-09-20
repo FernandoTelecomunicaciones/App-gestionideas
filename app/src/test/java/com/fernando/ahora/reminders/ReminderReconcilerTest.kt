@@ -208,6 +208,58 @@ class ReminderReconcilerTest {
         assertNotNull("a cursor must exist even though delivery was cancelled", scheduler.armed)
     }
 
+    // ---- GB-02: a failing/cancelled read or arm must never leave the alarm that just fired without a successor
+
+    @Test
+    fun aFailingCandidateRead_installsAnEmergencyRetryCursor_thenPropagates_GB02() {
+        store.put(reminder(1, today, LocalTime.of(18, 0)))
+        store.failCandidates = IllegalStateException("database is locked")
+        try {
+            reconcile()
+            error("the failure must propagate to the caller")
+        } catch (e: IllegalStateException) {
+            // expected
+        }
+        assertEquals(now.plus(Duration.ofSeconds(60)), scheduler.armed)
+    }
+
+    @Test
+    fun aReadCutShortByTheReceiverTimeout_stillLeavesTheRetryCursor_GB02() {
+        store.failCandidates = CancellationException("receiver timeout")
+        try {
+            reconcile()
+        } catch (e: CancellationException) {
+            // expected
+        }
+        assertEquals(now.plus(Duration.ofSeconds(60)), scheduler.armed)
+    }
+
+    @Test
+    fun aFailingArm_triesTheEmergencyCursor_GB02() {
+        store.put(reminder(1, today, LocalTime.of(18, 0)))
+        scheduler.armFailures = 1 // the real arm fails; the emergency one gets through
+        try {
+            reconcile()
+        } catch (e: IllegalStateException) {
+            // expected
+        }
+        assertEquals(now.plus(Duration.ofSeconds(60)), scheduler.armed)
+    }
+
+    @Test
+    fun theRealCursorIsSettledBeforeTheSweep_soACutSweepCannotStrandIt_GB02() {
+        store.put(reminder(1, today, LocalTime.of(8, 0)))   // due -> delivered
+        store.put(reminder(2, today, LocalTime.of(18, 0)))  // the real next cursor
+        notifier.failActiveCards = CancellationException("receiver timeout during the sweep")
+        try {
+            reconcile()
+        } catch (e: CancellationException) {
+            // expected
+        }
+        assertEquals(listOf(1L), notifier.posted)
+        assertEquals(Instant.parse("2026-09-20T16:00:00Z"), scheduler.armed)
+    }
+
     // ---- revision guard (review #2 A2-01) -------------------------------------------------
 
     @Test
@@ -278,6 +330,28 @@ class ReminderReconcilerTest {
         withTimeout(10_000) { (1..50).map { reconciler.request("storm-$it") }.joinAll() }
         assertEquals(listOf(1L), notifier.posted)
         assertEquals(Instant.parse("2026-09-20T16:00:00Z"), scheduler.armed)
+    }
+
+    @Test
+    fun requestsAreConflated_aStormBehindARunningPassCostsOneFollowUp_GB05() = runBlocking {
+        store.put(reminder(1, today, LocalTime.of(8, 0)))
+        val inPost = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        notifier.onPost = { inPost.countDown(); release.await() }
+
+        val first = reconciler.request("first")               // starts, then blocks inside the delivery
+        assertTrue(inPost.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        val storm = (1..50).map { reconciler.request("storm-$it") } // all queue behind the running pass
+        assertTrue("a storm shares ONE queued job", storm.toSet().size == 1)
+        release.countDown()
+        withTimeout(10_000) { (listOf(first) + storm).joinAll() }
+
+        assertEquals("one running pass + one conflated follow-up, not 51", 2, store.candidateReads)
+        assertEquals(listOf(1L), notifier.posted)
+
+        val before = store.candidateReads
+        withTimeout(10_000) { reconciler.request("later").join() } // the queue must not get stuck after draining
+        assertEquals(before + 1, store.candidateReads)
     }
 
     @Test

@@ -211,6 +211,64 @@ class ReminderIntegrationTest {
     }
 
     @Test
+    fun aDelayedStaleAction_neverDismissesANewerValidCard_GB01() = run {
+        val id = repo.create(TaskFields("x", dueDate = today, dueTime = LocalTime.of(18, 0), reminderEnabled = true))!!
+        time.instant = at18
+        reconciler.reconcileNow("alarm")
+        val staleRevision = notifier.cards.single().revision // card for revision 0 was tapped...
+
+        // ...but before the broadcast is processed the user moves the reminder and the NEW schedule fires.
+        repo.edit(id, TaskFields("x", dueDate = today, dueTime = LocalTime.of(19, 0), reminderEnabled = true))
+        time.instant = Instant.parse("2026-09-20T17:00:00Z") // 19:00 Madrid
+        reconciler.reconcileNow("alarm")
+        val newCard = notifier.cards.single()
+        assertEquals(staleRevision + 1, newCard.revision)
+
+        actions.done(id, staleRevision)    // the late revision-0 HECHO
+        actions.snooze(id, staleRevision)  // and the late revision-0 +10 MIN
+
+        assertEquals("the newer card must survive", listOf(newCard), notifier.cards)
+        val t = repo.get(id)!!
+        assertFalse(t.done)
+        assertNull(t.reminderSnoozeUntil)
+        // ...and it is still actionable
+        actions.snooze(id, newCard.revision)
+        assertNotNull(repo.get(id)!!.reminderSnoozeUntil)
+        assertTrue(notifier.cards.isEmpty())
+    }
+
+    @Test
+    fun aNoOpActionStillDismissesItsOwnCard() = run {
+        val id = repo.create(TaskFields("x", dueDate = today, dueTime = LocalTime.of(18, 0), reminderEnabled = true))!!
+        time.instant = at18
+        reconciler.reconcileNow("alarm")
+        val card = notifier.cards.single()
+        actions.snooze(id, card.revision)
+        notifier.cards += card // the same card is still on screen (duplicate tap queued behind the first)
+
+        actions.snooze(id, card.revision) // no-op: already snoozed
+        assertTrue("the tapped card is dismissed even though nothing changed", notifier.cards.isEmpty())
+    }
+
+    @Test
+    fun aDuplicateSnooze_doesNotPushThePendingSnoozeFurther_GB06() = run {
+        val id = repo.create(TaskFields("x", dueDate = today, dueTime = LocalTime.of(18, 0), reminderEnabled = true))!!
+        time.instant = at18
+        reconciler.reconcileNow("alarm")
+        val card = notifier.cards.single()
+
+        actions.snooze(id, card.revision)
+        val firstSnooze = repo.get(id)!!.reminderSnoozeUntil
+        assertEquals(at18.plusSeconds(600), firstSnooze)
+
+        time.instant = at18.plusSeconds(120) // the duplicate broadcast arrives later
+        actions.snooze(id, card.revision)
+
+        assertEquals(firstSnooze, repo.get(id)!!.reminderSnoozeUntil)
+        assertEquals(firstSnooze, scheduler.armed)
+    }
+
+    @Test
     fun aSnoozeForATaskThatNeverFired_isIgnored() = run {
         val id = repo.create(TaskFields("x", dueDate = tomorrow, dueTime = LocalTime.of(9, 0), reminderEnabled = true))!!
         actions.snooze(id, 0)

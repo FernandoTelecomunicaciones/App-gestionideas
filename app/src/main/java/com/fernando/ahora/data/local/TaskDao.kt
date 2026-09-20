@@ -56,11 +56,14 @@ internal interface TaskDao {
     )
     suspend fun markDelivered(id: Long, revision: Int, now: Long): Int
 
-    /** Snoozes only a reminder that actually fired for this exact schedule. */
+    /**
+     * Snoozes only a reminder that actually fired for this exact schedule AND is not already snoozed, so a
+     * duplicated or delayed +10 MIN can never push a pending snooze further out (GB-06).
+     */
     @Query(
         "UPDATE tasks SET reminderSnoozeUntil = :until " +
             "WHERE id = :id AND reminderRevision = :revision AND done = 0 " +
-            "AND reminderEnabled = 1 AND reminderFiredAt IS NOT NULL",
+            "AND reminderEnabled = 1 AND reminderFiredAt IS NOT NULL AND reminderSnoozeUntil IS NULL",
     )
     suspend fun snoozeIfDelivered(id: Long, revision: Int, until: Long): Int
 }
