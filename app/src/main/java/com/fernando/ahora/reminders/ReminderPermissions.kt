@@ -9,6 +9,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.fernando.ahora.domain.ReminderPermissionSource
+import com.fernando.ahora.domain.ReminderPermissionState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,7 +20,14 @@ import javax.inject.Singleton
 class ReminderPermissions @Inject constructor(
     @ApplicationContext private val context: Context,
     private val scheduler: AlarmManagerScheduler,
-) {
+) : ReminderPermissionSource {
+    override fun snapshot() = ReminderPermissionState(
+        notificationsGranted = notificationsGranted(),
+        canAskNotifications = needsRuntimeNotificationPermission(),
+        exactAlarmsAllowed = exactAlarmsAllowed(),
+        exactAlarmsNeedSpecialAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+    )
+
     /** POST_NOTIFICATIONS (API 33+) and the app-level / channel toggle. */
     fun notificationsGranted(): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
 
@@ -31,18 +40,27 @@ class ReminderPermissions @Inject constructor(
     fun exactAlarmsAllowed(): Boolean = scheduler.canScheduleExact()
 
     /** Intent to the system screen where exact alarms can be granted (API 31+), else null. */
-    fun exactAlarmSettingsIntent(): Intent? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
-        } else {
-            null
-        }
+    fun exactAlarmSettingsIntent(): Intent? = exactAlarmSettingsIntent(context.packageName)
 
-    fun notificationSettingsIntent(): Intent =
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    fun notificationSettingsIntent(): Intent = notificationSettingsIntent(context.packageName)
 
-    fun channelSettingsIntent(): Intent =
-        Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            .putExtra(Settings.EXTRA_CHANNEL_ID, AndroidReminderNotifier.CHANNEL_ID)
+    fun channelSettingsIntent(): Intent = channelSettingsIntent(context.packageName)
+
+    /** Pure intent builders, so the UI (which only has a Context) can launch the same system screens. */
+    companion object {
+        fun exactAlarmSettingsIntent(packageName: String): Intent? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))
+            } else {
+                null
+            }
+
+        fun notificationSettingsIntent(packageName: String): Intent =
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+
+        fun channelSettingsIntent(packageName: String): Intent =
+            Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                .putExtra(Settings.EXTRA_CHANNEL_ID, AndroidReminderNotifier.CHANNEL_ID)
+    }
 }

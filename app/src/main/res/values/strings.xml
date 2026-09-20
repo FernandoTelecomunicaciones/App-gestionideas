@@ -10,4 +10,167 @@
     <string name="notif_action_done">HECHO</string>
     <string name="notif_action_snooze">+10 MIN</string>
     <string name="notif_action_open">ABRIR</string>
+
+    <!-- Chrome -->
+    <string name="nav_home">Hoy</string>
+    <string name="nav_inbox">Bandeja</string>
+    <string name="nav_tasks">Tareas</string>
+    <string name="cd_new_task">Nueva tarea</string>
+    <string name="cd_settings">Ajustes</string>
+    <string name="cd_back">Atrás</string>
+
+    <!-- Labels shared by several screens (PRODUCT_SPEC §6.6) -->
+    <string name="date_today">Hoy</string>
+    <string name="date_tomorrow">Mañana</string>
+    <string name="date_none">Sin fecha</string>
+    <string name="priority_p1_name">Importante</string>
+    <string name="priority_p2_name">Normal</string>
+    <string name="priority_p3_name">Puede esperar</string>
+    <string name="a11y_priority">Prioridad %1$s</string>
+    <string name="a11y_mark_done">Marcar como hecha</string>
+    <string name="a11y_done">Hecha</string>
+    <string name="a11y_not_done">Pendiente</string>
+
+    <!-- Hoy -->
+    <string name="greeting_morning">Buenos días</string>
+    <string name="greeting_afternoon">Buenas tardes</string>
+    <string name="greeting_night">Buenas noches</string>
+    <string name="home_title">¿Qué toca ahora?</string>
+    <string name="home_kicker_now">Ahora</string>
+    <string name="home_start">Empezar</string>
+    <string name="home_today_header">Tus 3 de hoy</string>
+    <string name="home_rest">También pendiente · %1$d</string>
+    <string name="home_rest_expanded_state">Desplegado</string>
+    <string name="home_rest_collapsed_state">Plegado</string>
+    <string name="home_empty">Nada pendiente.</string>
+
+    <!-- Bandeja -->
+    <string name="inbox_title">¿Qué tienes en la cabeza?</string>
+    <string name="inbox_subtitle">Escribe y guarda. Todo lo demás puede esperar.</string>
+    <string name="inbox_placeholder">Ej. Llamar al dentista</string>
+    <string name="inbox_save">Guardar</string>
+    <string name="inbox_chip_today">Hoy</string>
+    <string name="inbox_chip_date">Fecha</string>
+    <string name="inbox_chip_priority">Prioridad</string>
+    <string name="inbox_section">Sin decidir todavía</string>
+    <string name="inbox_empty">Todo fuera de tu cabeza.</string>
+    <string name="snack_saved_inbox">Guardado en Bandeja</string>
+    <string name="snack_saved">Guardado</string>
+
+    <!-- Tareas -->
+    <string name="tasks_title">Tareas</string>
+    <string name="tasks_search">Buscar</string>
+    <string name="tasks_filter_pending">Pendientes</string>
+    <string name="tasks_filter_upcoming">Próximas</string>
+    <string name="tasks_filter_no_date">Sin fecha</string>
+    <string name="tasks_filter_p1">P1</string>
+    <string name="tasks_link_completed">Completadas</string>
+    <string name="tasks_link_pending">Pendientes</string>
+    <string name="tasks_empty">Nada coincide.</string>
+    <string name="tasks_empty_completed">Nada completado todavía.</string>
+    <string name="tasks_recurring_done">Hecha. Las tareas que se repiten no se reabren; la siguiente ya está creada.</string>
+
+    <!-- Editor -->
+    <string name="editor_new">Nueva tarea</string>
+    <string name="editor_edit">Editar tarea</string>
+    <string name="editor_title_label">Título</string>
+    <string name="editor_title_placeholder">¿Qué hay que hacer?</string>
+    <string name="editor_notes_label">Notas (opcional)</string>
+    <string name="editor_notes_placeholder">Detalles, contexto…</string>
+    <string name="editor_date_label">Fecha</string>
+    <string name="editor_date_today">Hoy</string>
+    <string name="editor_date_tomorrow">Mañana</string>
+    <string name="editor_date_pick">Elegir fecha</string>
+    <string name="editor_time_label">Hora (opcional)</string>
+    <string name="editor_time_none">Sin hora</string>
+    <string name="editor_time_clear">Quitar hora</string>
+    <string name="editor_reminder">Avisarme a esa hora</string>
+    <string name="editor_reminder_past">Esa hora ya pasó: no habrá aviso.</string>
+    <string name="editor_priority_label">Prioridad</string>
+    <string name="editor_more_closed">+ Más opciones</string>
+    <string name="editor_more_open">− Más opciones</string>
+    <string name="editor_repeat_label">Repetir</string>
+    <string name="editor_repeat_none">No se repite</string>
+    <string name="editor_repeat_daily">Cada día</string>
+    <string name="editor_repeat_weekly">Cada semana</string>
+    <string name="editor_repeat_monthly">Cada mes</string>
+    <string name="editor_repeat_needs_date">Elige primero una fecha.</string>
+    <string name="editor_duration_label">Duración estimada</string>
+    <string name="editor_duration_none">Sin estimar</string>
+    <string name="editor_duration_15">15 min</string>
+    <string name="editor_duration_30">30 min</string>
+    <string name="editor_duration_60">1 hora</string>
+    <string name="editor_duration_120">2 horas</string>
+    <string name="editor_list_label">Lista / categoría</string>
+    <string name="editor_list_placeholder">Ej. Casa, Trabajo, Máster</string>
+    <string name="editor_cancel">Cancelar</string>
+    <string name="editor_save">Guardar</string>
+    <string name="editor_delete">Eliminar</string>
+    <string name="picker_ok">Aceptar</string>
+    <string name="picker_cancel">Cancelar</string>
+    <string name="picker_time_title">Hora del aviso</string>
+
+    <!-- Reminder permission hints (editor and Ajustes) -->
+    <string name="hint_notifications_off">Las notificaciones están desactivadas, así que no verás este aviso.</string>
+    <string name="hint_exact_off">Sin alarmas exactas, el aviso puede llegar con algunos minutos de retraso.</string>
+    <string name="hint_action_allow">Permitir</string>
+    <string name="hint_action_open_settings">Abrir ajustes</string>
+
+    <!-- Snackbars -->
+    <string name="snack_completed">Tarea completada</string>
+    <string name="snack_postponed">Pospuesta a mañana</string>
+    <string name="snack_deleted">Eliminada</string>
+    <string name="snack_undo">Deshacer</string>
+    <string name="snack_no_longer_pending">Esta tarea ya no está pendiente</string>
+    <string name="snack_save_failed">No se pudo guardar</string>
+
+    <!-- Foco -->
+    <string name="focus_kicker">Foco</string>
+    <string name="focus_only_this">Sólo esto ahora.</string>
+    <string name="focus_finish">Terminar</string>
+    <string name="focus_postpone">Posponer</string>
+    <string name="focus_exit">Salir</string>
+    <string name="focus_preset">%1$d min</string>
+
+    <!-- Ajustes -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_reminders">Recordatorios</string>
+    <string name="settings_notifications">Notificaciones</string>
+    <string name="settings_exact_alarms">Alarmas exactas</string>
+    <string name="settings_state_allowed">Permitidas</string>
+    <string name="settings_state_not_allowed">No permitidas</string>
+    <string name="settings_state_not_needed">No hace falta</string>
+    <string name="settings_exact_off_detail">Los avisos pueden llegar con algunos minutos de retraso.</string>
+    <string name="settings_notifications_off_detail">No verás ningún aviso.</string>
+    <string name="settings_sound">Sonido y vibración</string>
+    <string name="settings_sound_action">Abrir</string>
+    <string name="settings_reminders_note">Si fuerzas la detención de la app, o el sistema limita su batería, los avisos pueden perderse hasta que vuelvas a abrirla.</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_behavior">Comportamiento</string>
+    <string name="settings_keep_screen_on">Mantener pantalla encendida en Foco</string>
+    <string name="settings_data">Datos</string>
+    <string name="settings_export">Exportar copia</string>
+    <string name="settings_export_detail">Guarda tus tareas en un archivo, donde tú elijas.</string>
+    <string name="settings_import">Importar copia</string>
+    <string name="settings_import_detail">Sustituye tus tareas por las de un archivo de AHORA.</string>
+    <string name="settings_about">Acerca de</string>
+    <string name="settings_version">Versión %1$s</string>
+    <string name="settings_privacy">Sin cuenta ni sincronización. AHORA no envía tus datos a ningún sitio; las copias que exportes van donde tú elijas.</string>
+    <string name="settings_licenses">Licencias de código abierto</string>
+    <string name="settings_licenses_body">Tipografía Archivo (SIL OFL 1.1) · Iconos Lucide (ISC) · AndroidX, Jetpack Compose, Room, Hilt y kotlinx (Apache 2.0).</string>
+    <string name="settings_import_title">¿Reemplazar tus tareas?</string>
+    <string name="settings_import_body">Se sustituirán tus tareas actuales (%1$d) por las de la copia (%2$d). No se puede deshacer.</string>
+    <string name="settings_import_confirm">Reemplazar</string>
+    <string name="settings_import_cancel">Cancelar</string>
+    <string name="snack_exported">Copia exportada</string>
+    <string name="snack_export_failed">No se pudo exportar la copia</string>
+    <string name="snack_imported">Copia importada</string>
+    <string name="snack_import_not_backup">Ese archivo no es una copia de AHORA</string>
+    <string name="snack_import_too_new">Esa copia es de otra versión de AHORA</string>
+    <string name="snack_import_invalid">La copia tiene datos no válidos. No se ha cambiado nada.</string>
+    <string name="snack_import_failed">No se pudo leer el archivo</string>
 </resources>

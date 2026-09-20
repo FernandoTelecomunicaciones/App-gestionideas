@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Draft v1 — Phase 1, awaiting Architecture Gate approval. No code exists.** |
+| Status | **Approved at the Architecture Gate (2026-09-20); implemented through M10. Amendments §17 (review #2), §18 (Gate B) and §19 (UI) supersede the older body text where they conflict.** |
 | Date | 2026-09-20 |
 | Requirements | [PRODUCT_SPEC.md](PRODUCT_SPEC.md) · Rationale: [DECISIONS.md](DECISIONS.md) (`D-xx`, `OD-x`) |
 
@@ -441,3 +441,24 @@ Source: Gate B findings GB-01…GB-07, triaged in DECISIONS.md › "Gate B — C
 **GB-06 +10 MIN cannot re-snooze.** `snoozeIfDelivered` also requires `reminderSnoozeUntil IS NULL`, so a duplicated/delayed tap cannot push a pending snooze further out. (Rejected: bumping the revision on snooze — the harm is milliseconds, and a bump would invalidate legitimate actions.)
 
 **GB-07 Notification entry points (engine half).** `MainActivity` forwards `intent.data` on cold start (`savedInstanceState == null`) and warm start (`addOnNewIntentListener`) to `NotificationLinkHandler`, which returns a validated `LinkDestination` (`Home` / `Focus(id)`), cancelling the matching ABRIR card. **The navigation host that consumes the destination and builds `[Home, Focus]` is still M3 work** (A7 remains unverified).
+
+## 19. UI implementation notes (M3–M7, M10) — normative where they differ from §8/§9/§13
+
+Rationale and the full deviation table: DECISIONS D-33.
+
+**Layout of `ui/`** (as built): `theme/` (`AhoraColors` roles, `AhoraType` Archivo scale, `AhoraTheme`), `components/` (`AhoraButton`, `AhoraChip`, `AhoraCheckbox`, `AhoraSwitch`, `PriorityTag`, `TaskRow`, `AhoraTextField`, `TabTopBar`/`BackTopBar`, `focusRing`), `common/` (`TaskActions`, `UiMessenger`, `UndoToken`, `DateLabels`, `PickerDates`), `navigation/Routes.kt`, `AhoraRoot.kt`, `MainViewModel`, and one package per screen (`home`, `inbox`, `tasks`, `editor`, `focus`, `settings`), each with a `*Route` (owns the ViewModel), a stateless `*Screen` and a ViewModel. `ArchitectureBoundaryTest` still holds: `ui` imports nothing from `data`, Room, `ReminderStore` or the reconciler. Preferences and the backup codec are ports/pure code in `domain` (`AppPreferences`, `ReminderPermissionSource`, `BackupCodec`); `data.prefs` implements DataStore.
+
+**Navigation.** Routes are type-safe (`Home`, `Inbox`, `Tasks`, `Focus(taskId)`, `Settings`). All stack manipulation lives in extension functions in `Routes.kt` and is unit-tested with `TestNavHostController`:
+- `switchTab`: Hoy pops back to the root; Bandeja/Tareas replace each other above it (`saveState`/`restoreState`), so system back from either lands on Hoy.
+- `openFocus` (Empezar): plain push → `[Home, Focus]`.
+- `applyLink(LinkDestination)`: **Home** = `switchTab(Home)` (clears everything above); **Focus(id)** = pop to Home, then push Focus (`[Home, Focus]`) from any starting point (another tab, Ajustes, another Foco); re-delivering the Foco already on screen is a no-op so the running timer is not restarted.
+- `leaveFocusToHome`: idempotent (Terminar and the "task is done" observer may both fire).
+- Destination changes use a ~300 ms fade-through; chrome (bottom bar, FAB) is shown only on the three tabs, and the FAB is hidden while the sheet is open.
+
+**Entry from notifications.** `MainActivity` (cold: `savedInstanceState == null`; warm: `addOnNewIntentListener`) → `NotificationLinkHandler.resolve` (validation, revision-aware card dismissal — unchanged) → `Channel<LinkDestination>` → `AhoraRoot` closes an open sheet and calls `applyLink`. The Foco `ViewModel` re-validates the task on its own (missing/done ⇒ `Closed` ⇒ back to Hoy).
+
+**Editor.** One `ModalBottomSheet` composed at the root, driven by the Activity-scoped `EditorViewModel`. The draft (`EditorDraft`, `@Serializable`) is snapshot state mirrored into `SavedStateHandle`. Guardar closes the sheet and writes through `TaskActions`/`TaskRepository` in the application scope; the sheet never schedules a reminder. `POST_NOTIFICATIONS` is requested in context (first time the reminder switch goes on and the dialog can still be shown); after an answer, or if the runtime dialog is no longer available, the inline hint offers "Abrir ajustes". The exact-alarm hint offers "Permitir" (system screen) and disappears on return when access was granted (permission state is re-read on `ON_RESUME`).
+
+**Foco.** `FocusViewModel` keeps `[preset, endMillis]` + an "alerted" flag in its `SavedStateHandle`; `remaining = ceil((end − now)/1 s)`; the haptic fires once (`alertPending` → `onAlerted`). Terminar/Posponer run through `TaskActions` and set `leaving`, so the screen closes immediately while the write completes in the application scope.
+
+**Theme.** System/Light/Dark from DataStore; the splash is held until the first read (`themeMode == null`), system-bar styles and the window background follow the resolved theme.
