@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AHORA</string>
+
+    <!-- Reminder notification (PRODUCT_SPEC §5.6). Never urgency or blame wording. -->
+    <string name="channel_reminders_name">Recordatorios</string>
+    <string name="channel_reminders_description">Avisos a la hora que elijas para una tarea.</string>
+    <string name="notif_body">Vence a las %1$s</string>
+    <string name="notif_body_no_time">Vence hoy</string>
+    <string name="notif_action_done">HECHO</string>
+    <string name="notif_action_snooze">+10 MIN</string>
+    <string name="notif_action_open">ABRIR</string>
+</resources>
