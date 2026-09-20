@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-334ae0b3-9885-4376-97da-d4311dec80b7/styles.css">
+  <script src="_ds/modernist-334ae0b3-9885-4376-97da-d4311dec80b7/_ds_bundle.js"></script>
+  <style>
+    body{margin:0}
+    .ahora-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;font:600 12.5px var(--font-heading);border:1px solid var(--color-divider);cursor:pointer;user-select:none;background:transparent;color:var(--color-text)}
+    .ahora-chip:hover{background:color-mix(in srgb, var(--color-text) 6%, transparent)}
+    .ahora-row{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--color-divider);cursor:pointer}
+    .ahora-row:hover{background:color-mix(in srgb, var(--color-text) 4%, transparent)}
+    .ahora-check{width:22px;height:22px;flex:none;border:1.5px solid var(--color-divider);display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .ahora-check:hover{border-color:var(--color-accent)}
+    .ahora-sheet-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    .ahora-fab{width:56px;height:56px;background:var(--color-accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-md)}
+    .ahora-fab:hover{background:var(--color-accent-600)}
+    .ahora-navitem{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;cursor:pointer;font:600 10.5px var(--font-heading);letter-spacing:.02em}
+    select.input{appearance:none}
+  </style>
+</helmet>
+
+<div style="{{ pageStyle }}">
+
+  <div style="max-width:1180px;margin:0 auto;padding:48px 32px 80px">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:2px solid var(--color-divider);padding-bottom:24px;margin-bottom:40px;flex-wrap:wrap">
+      <div style="max-width:640px">
+        <div style="font:600 11px var(--font-heading);letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Prototipo Android · Material 3 sobre Modernist</div>
+        <h1 style="margin:6px 0 10px;font-size:34px">AHORA</h1>
+        <p style="margin:0;font-size:14px;opacity:.75;line-height:1.6">Capturar → decidir después → ver lo que importa → hacerlo → dejar de gestionarlo. Estructura y patrones de interacción de Material 3 (barra inferior, FAB, hojas inferiores); color, tipografía y trazos del sistema Modernist — sin esquinas redondeadas, un solo acento, reglas de 2px.</p>
+      </div>
+      <button style="{{ themeToggleStyle }}" onClick="{{ toggleTheme }}">
+        {{ themeToggleIcon }}
+        <span>{{ themeToggleLabel }}</span>
+      </button>
+    </div>
+
+    <h6 style="margin:0 0 4px;color:var(--color-accent-700)">Galería de pantallas</h6>
+    <p style="margin:0 0 24px;font-size:13px;opacity:.65;max-width:560px">Hoy, Bandeja y Tareas — las tres únicas destinaciones. Estático, para revisar el sistema visual completo.</p>
+
+    <div style="display:flex;gap:36px;flex-wrap:wrap;margin-bottom:64px">
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:600 12px var(--font-heading);letter-spacing:.04em">01 · HOY</div>
+        <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="760" dark="{{ isDark }}" hint-size="360,760">
+          <div style="{{ screenStyle }};padding:20px 20px 8px;display:flex;flex-direction:column;height:100%;overflow:hidden">
+            <div style="font-size:12px;opacity:.6;margin-bottom:2px">{{ greeting }}</div>
+            <h2 style="margin:0 0 20px;font-size:24px">¿Qué toca ahora?</h2>
+
+            <div style="border:1px solid var(--color-divider);padding:18px;margin-bottom:24px">
+              <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:10px">Ahora</div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:17px;line-height:1.3;margin-bottom:12px">{{ ahoraTask.title }}</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                <span style="{{ ahoraTask.tagStyle }}">{{ ahoraTask.priorityLabel }}</span>
+                <span style="font-size:12px;opacity:.6">{{ ahoraTask.dateLabel }}</span>
+              </div>
+              <button style="{{ primaryBtnStyle }}">Empezar</button>
+            </div>
+
+            <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;opacity:.55;margin-bottom:6px">Tus 3 de hoy</div>
+            <sc-for list="{{ galleryToday }}" as="t" hint-placeholder-count="3">
+              <div class="ahora-row">
+                <div class="ahora-check"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px">{{ t.title }}</div>
+                </div>
+                <span style="{{ t.tagStyle }}">{{ t.priorityLabel }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-top:12px;font-size:13px;color:var(--color-accent-700);font-weight:600">También pendiente · {{ galleryRestCount }}</div>
+          </div>
+        </x-import>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:600 12px var(--font-heading);letter-spacing:.04em">02 · BANDEJA</div>
+        <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="760" dark="{{ isDark }}" hint-size="360,760">
+          <div style="{{ screenStyle }};padding:20px 20px 8px;display:flex;flex-direction:column;height:100%;overflow:hidden">
+            <h2 style="margin:0 0 6px;font-size:22px">¿Qué tienes en la cabeza?</h2>
+            <p style="margin:0 0 16px;font-size:13px;opacity:.65">Escribe y guarda. Todo lo demás puede esperar.</p>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input class="input" placeholder="Ej. Llamar al dentista" style="flex:1" readonly>
+              <button style="{{ primaryBtnStyleCompact }}">Guardar</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:20px;opacity:.55">
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">Hoy</span>
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">Fecha</span>
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">Prioridad</span>
+            </div>
+            <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;opacity:.55;margin-bottom:6px">Sin decidir todavía</div>
+            <sc-for list="{{ galleryInbox }}" as="t" hint-placeholder-count="4">
+              <div class="ahora-row" style="cursor:default">
+                <div style="flex:1;min-width:0;font-size:14px">{{ t.title }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:600 12px var(--font-heading);letter-spacing:.04em">03 · TAREAS</div>
+        <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="760" dark="{{ isDark }}" hint-size="360,760">
+          <div style="{{ screenStyle }};padding:20px 20px 8px;display:flex;flex-direction:column;height:100%;overflow:hidden">
+            <h2 style="margin:0 0 14px;font-size:22px">Tareas</h2>
+            <input class="input" placeholder="Buscar" style="margin-bottom:12px" readonly>
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+              <span class="ahora-chip" style="background:var(--color-accent);color:#fff;border-color:var(--color-accent);font-size:11px;padding:5px 10px">Pendientes</span>
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">Próximas</span>
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">Sin fecha</span>
+              <span class="ahora-chip" style="font-size:11px;padding:5px 10px">P1</span>
+            </div>
+            <sc-for list="{{ galleryAll }}" as="t" hint-placeholder-count="6">
+              <div class="ahora-row">
+                <div class="ahora-check"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px">{{ t.title }}</div>
+                  <div style="font-size:11px;opacity:.55;margin-top:2px">{{ t.dateLabel }}</div>
+                </div>
+                <span style="{{ t.tagStyle }}">{{ t.priorityLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+    </div>
+
+    <div style="border-top:2px solid var(--color-divider);padding-top:40px;margin-bottom:24px">
+      <h6 style="margin:0 0 4px;color:var(--color-accent-700)">Flujo interactivo — crear / editar tarea con recordatorio</h6>
+      <p style="margin:0;font-size:13px;opacity:.65;max-width:640px">Prueba el flujo completo: toca una tarea en Bandeja para decidir fecha y prioridad, activa un recordatorio, pulsa Empezar para entrar en Foco, o usa la notificación de abajo.</p>
+    </div>
+
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:6px">
+          <sc-for list="{{ tabsList }}" as="tb" hint-placeholder-count="3">
+            <button style="{{ tb.style }}" onClick="{{ tb.onClick }}">{{ tb.label }}</button>
+          </sc-for>
+        </div>
+        <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="380" height="800" dark="{{ isDark }}" hint-size="380,800">
+          <div style="{{ screenStyle }};height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden">
+
+            <sc-if value="{{ isFocusScreen }}" hint-placeholder-val="{{ false }}">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:28px">
+                <div>
+                  <div style="font:600 10px var(--font-heading);letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:14px">Foco</div>
+                  <h3 style="margin:0 0 8px;font-size:24px;line-height:1.2">{{ focusTaskTitle }}</h3>
+                  <p style="margin:0;font-size:14px;opacity:.6">Sólo esto ahora.</p>
+                </div>
+                <div style="font:800 44px var(--font-heading)">{{ focusClock }}</div>
+                <div style="display:flex;gap:8px">
+                  <sc-for list="{{ presetsList }}" as="p" hint-placeholder-count="3">
+                    <button style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</button>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:220px;margin-top:12px">
+                  <button style="{{ primaryBtnStyle }}" onClick="{{ finishFocus }}">Terminar</button>
+                  <button style="{{ secondaryBtnStyle }}" onClick="{{ snoozeFocus }}">Posponer</button>
+                  <button style="{{ ghostBtnStyle }}" onClick="{{ exitFocus }}">Salir</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isNotFocusScreen }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;overflow:auto;padding:20px 20px 88px">
+
+                <sc-if value="{{ isHoyTab }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:12px;opacity:.6;margin-bottom:2px">{{ greeting }}</div>
+                  <h2 style="margin:0 0 20px;font-size:24px">¿Qué toca ahora?</h2>
+                  <sc-if value="{{ hasAhora }}" hint-placeholder-val="{{ true }}">
+                    <div style="border:1px solid var(--color-divider);padding:18px;margin-bottom:24px">
+                      <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:10px">Ahora</div>
+                      <div style="font-family:var(--font-heading);font-weight:800;font-size:17px;line-height:1.3;margin-bottom:12px;cursor:pointer" onClick="{{ openAhoraEdit }}">{{ liveAhora.title }}</div>
+                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                        <span style="{{ liveAhora.tagStyle }}">{{ liveAhora.priorityLabel }}</span>
+                        <span style="font-size:12px;opacity:.6">{{ liveAhora.dateLabel }}</span>
+                        <sc-if value="{{ liveAhora.reminder }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;opacity:.6">🔔 {{ liveAhora.time }}</span></sc-if>
+                      </div>
+                      <button style="{{ primaryBtnStyle }}" onClick="{{ startFocus }}">Empezar</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ hasAhora }}" hint-placeholder-val="{{ true }}">
+                    <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;opacity:.55;margin-bottom:6px">Tus 3 de hoy</div>
+                  </sc-if>
+                  <sc-for list="{{ liveToday }}" as="t" hint-placeholder-count="2">
+                    <div class="ahora-row">
+                      <div class="ahora-check" onClick="{{ t.toggleDone }}">{{ t.checkMark }}</div>
+                      <div style="flex:1;min-width:0" onClick="{{ t.openEdit }}">
+                        <div style="font-size:14px">{{ t.title }}</div>
+                      </div>
+                      <span style="{{ t.tagStyle }}">{{ t.priorityLabel }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ liveRestCount }}" hint-placeholder-val="{{ 0 }}">
+                    <div style="margin-top:12px;font-size:13px;color:var(--color-accent-700);font-weight:600;cursor:pointer" onClick="{{ toggleRest }}">También pendiente · {{ liveRestCount }}</div>
+                  </sc-if>
+                  <sc-if value="{{ restOpen }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ liveRest }}" as="t" hint-placeholder-count="2">
+                      <div class="ahora-row">
+                        <div class="ahora-check" onClick="{{ t.toggleDone }}">{{ t.checkMark }}</div>
+                        <div style="flex:1;min-width:0" onClick="{{ t.openEdit }}">
+                          <div style="font-size:14px">{{ t.title }}</div>
+                        </div>
+                        <span style="{{ t.tagStyle }}">{{ t.priorityLabel }}</span>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </sc-if>
+
+                <sc-if value="{{ isBandejaTab }}" hint-placeholder-val="{{ false }}">
+                  <h2 style="margin:0 0 6px;font-size:22px">¿Qué tienes en la cabeza?</h2>
+                  <p style="margin:0 0 16px;font-size:13px;opacity:.65">Escribe y guarda. Todo lo demás puede esperar.</p>
+                  <div style="display:flex;gap:8px;margin-bottom:20px">
+                    <input class="input" placeholder="Ej. Llamar al dentista" style="flex:1" value="{{ captureText }}" onChange="{{ onCaptureChange }}" onKeyDown="{{ onCaptureKeyDown }}">
+                    <button style="{{ primaryBtnStyleCompact }}" onClick="{{ saveCapture }}">Guardar</button>
+                  </div>
+                  <div style="font:600 10px var(--font-heading);letter-spacing:.1em;text-transform:uppercase;opacity:.55;margin-bottom:6px">Sin decidir todavía</div>
+                  <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ liveInbox }}" as="t" hint-placeholder-count="3">
+                      <div class="ahora-row" onClick="{{ t.openEdit }}">
+                        <div style="flex:1;min-width:0;font-size:14px">{{ t.title }}</div>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}"></sc-if>
+                  <sc-if value="{{ inboxEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="text-align:center;padding:40px 12px;opacity:.55;font-size:13px">Todo fuera de tu cabeza.</div>
+                  </sc-if>
+                </sc-if>
+
+                <sc-if value="{{ isTareasTab }}" hint-placeholder-val="{{ false }}">
+                  <h2 style="margin:0 0 14px;font-size:22px">Tareas</h2>
+                  <input class="input" placeholder="Buscar" style="margin-bottom:12px" value="{{ searchQuery }}" onChange="{{ onSearchChange }}">
+                  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                    <sc-for list="{{ filterChips }}" as="f" hint-placeholder-count="4">
+                      <span class="ahora-chip" style="{{ f.style }}" onClick="{{ f.onClick }}">{{ f.label }}</span>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ liveFiltered }}" as="t" hint-placeholder-count="5">
+                    <div class="ahora-row">
+                      <div class="ahora-check" onClick="{{ t.toggleDone }}">{{ t.checkMark }}</div>
+                      <div style="flex:1;min-width:0" onClick="{{ t.openEdit }}">
+                        <div style="font-size:14px">{{ t.title }}</div>
+                        <div style="font-size:11px;opacity:.55;margin-top:2px">{{ t.dateLabel }}</div>
+                      </div>
+                      <span style="{{ t.tagStyle }}">{{ t.priorityLabel }}</span>
+                    </div>
+                  </sc-for>
+                </sc-if>
+
+              </div>
+
+              <div style="display:flex;border-top:2px solid var(--color-divider)">
+                <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+                  <div class="ahora-navitem" style="{{ n.style }}" onClick="{{ n.onClick }}">{{ n.icon }}{{ n.label }}</div>
+                </sc-for>
+              </div>
+              <div style="{{ fabWrapStyle }}"><div class="ahora-fab" onClick="{{ openNewTask }}">+</div></div>
+            </sc-if>
+
+            <sc-if value="{{ snackbarVisible }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ snackbarStyle }}">{{ snackbarText }}</div>
+            </sc-if>
+
+          </div>
+        </x-import>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px;max-width:380px;flex:1;min-width:280px">
+
+        <div>
+          <div style="font:600 12px var(--font-heading);letter-spacing:.04em;margin-bottom:10px">NOTIFICACIÓN DEL SISTEMA</div>
+          <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:20px;height:20px;background:var(--color-accent);color:#fff;display:flex;align-items:center;justify-content:center;font:800 11px var(--font-heading);flex:none">A</div>
+              <span style="font-size:11px;opacity:.6;font-weight:600">AHORA · ahora</span>
+            </div>
+            <div style="font-family:var(--font-heading);font-weight:800;font-size:14px;line-height:1.3;margin-bottom:2px">{{ notifTitle }}</div>
+            <div style="font-size:12.5px;opacity:.7;margin-bottom:12px">{{ notifBody }}</div>
+            <div style="display:flex;border-top:1px solid var(--color-divider);padding-top:8px;gap:4px">
+              <button style="{{ notifBtnStyle }}" onClick="{{ notifDone }}">HECHO</button>
+              <button style="{{ notifBtnStyle }}" onClick="{{ notifSnooze }}">+10 MIN</button>
+              <button style="{{ notifBtnStyle }}" onClick="{{ notifOpen }}">ABRIR</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font:600 12px var(--font-heading);letter-spacing:.04em;margin-bottom:10px">CÓMO PROBARLO</div>
+          <ol style="margin:0;padding-left:18px;font-size:13px;opacity:.75;line-height:1.9">
+            <li>En <b>Bandeja</b>, escribe una idea y pulsa Guardar — se añade sin fecha ni prioridad.</li>
+            <li>Toca esa tarea para abrir la hoja de edición: pon fecha, hora y activa el recordatorio.</li>
+            <li>Sube prioridad a P1 y guarda — reaparece en Hoy.</li>
+            <li>Pulsa <b>Empezar</b> en la tarjeta Ahora para entrar en Foco.</li>
+            <li>Prueba la notificación de la izquierda: HECHO la completa, ABRIR entra en Foco.</li>
+          </ol>
+        </div>
+
+      </div>
+
+    </div>
+
+    <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:fixed;inset:0;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;justify-content:center;z-index:50" onClick="{{ closeSheetBackdrop }}">
+        <div style="{{ sheetPanelStyle }}" onClick="{{ stopProp }}">
+          <div style="width:36px;height:4px;background:var(--color-divider);margin:0 auto 18px"></div>
+          <h3 style="margin:0 0 16px;font-size:19px">{{ sheetHeading }}</h3>
+
+          <div class="ahora-sheet-field">
+            <label style="font-size:12px;opacity:.7">Título</label>
+            <input class="input" value="{{ draftTitle }}" onChange="{{ onDraftTitle }}" placeholder="¿Qué hay que hacer?">
+          </div>
+
+          <div class="ahora-sheet-field">
+            <label style="font-size:12px;opacity:.7">Notas (opcional)</label>
+            <textarea class="input" value="{{ draftNotes }}" onChange="{{ onDraftNotes }}" placeholder="Detalles, contexto…"></textarea>
+          </div>
+
+          <div class="ahora-sheet-field">
+            <label style="font-size:12px;opacity:.7">Fecha</label>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ dateShortcuts }}" as="d" hint-placeholder-count="3">
+                <button style="{{ d.style }}" onClick="{{ d.onClick }}">{{ d.label }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ showDatePicker }}" hint-placeholder-val="{{ false }}">
+              <input type="date" class="input" style="margin-top:8px" value="{{ draftCustomDate }}" onChange="{{ onCustomDate }}">
+            </sc-if>
+          </div>
+
+          <div class="ahora-sheet-field">
+            <label style="font-size:12px;opacity:.7">Hora (opcional)</label>
+            <input type="time" class="input" value="{{ draftTime }}" onChange="{{ onDraftTime }}">
+          </div>
+
+          <sc-if value="{{ showReminderToggle }}" hint-placeholder-val="{{ false }}">
+            <div class="ahora-sheet-field">
+              <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--color-divider);padding:10px 12px">
+                <span style="font-size:13.5px">Avisarme a esa hora</span>
+                <div style="{{ reminderSwitchStyle }}" onClick="{{ toggleReminder }}"><div style="{{ reminderKnobStyle }}"></div></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div class="ahora-sheet-field">
+            <label style="font-size:12px;opacity:.7">Prioridad</label>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ priorityOptions }}" as="p" hint-placeholder-count="3">
+                <button style="{{ p.style }}" onClick="{{ p.onClick }}">{{ p.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="font-size:13px;color:var(--color-accent-700);font-weight:600;cursor:pointer;margin-bottom:8px" onClick="{{ toggleMore }}">{{ moreOpenLabel }}</div>
+          <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+            <div class="ahora-sheet-field">
+              <label style="font-size:12px;opacity:.7">Repetir</label>
+              <select class="input" value="{{ draftRepeat }}" onChange="{{ onDraftRepeat }}">
+                <option value="none">No se repite</option>
+                <option value="daily">Cada día</option>
+                <option value="weekly">Cada semana</option>
+                <option value="monthly">Cada mes</option>
+              </select>
+            </div>
+            <div class="ahora-sheet-field">
+              <label style="font-size:12px;opacity:.7">Duración estimada</label>
+              <select class="input" value="{{ draftDuration }}" onChange="{{ onDraftDuration }}">
+                <option value="">Sin estimar</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 hora</option>
+                <option value="120">2 horas</option>
+              </select>
+            </div>
+            <div class="ahora-sheet-field">
+              <label style="font-size:12px;opacity:.7">Lista / categoría</label>
+              <input class="input" value="{{ draftList }}" onChange="{{ onDraftList }}" placeholder="Ej. Casa, Trabajo, Máster">
+            </div>
+          </sc-if>
+
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button style="{{ secondaryBtnStyle }};flex:1" onClick="{{ closeSheet }}">Cancelar</button>
+            <button style="{{ saveBtnStyle }};flex:1" onClick="{{ saveSheet }}" disabled="{{ saveDisabled }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const LIGHT = {
+  bg:'#f3f2f2', surface:'#eae9e9', text:'#201e1d',
+  divider:'color-mix(in srgb, #201e1d 40%, transparent)',
+  n100:'#f8f4f4', n800:'#444141',
+  a100:'#fff2ef', a800:'#7c1405'
+};
+const DARK = {
+  bg:'#1a1817', surface:'#252221', text:'#f3f1ef',
+  divider:'rgba(243,241,239,.24)',
+  n100:'#2a2726', n800:'#e5e2e1',
+  a100:'#3a1510', a800:'#ffb3a3'
+};
+
+const PRIORITIES = { P1:'Importante', P2:'Normal', P3:'Puede esperar' };
+
+class Component extends DCLogic {
+  state = {
+    theme: 'light',
+    tab: 'hoy',
+    screen: 'main',
+    restOpen: false,
+    searchQuery: '',
+    activeFilter: 'Pendientes',
+    captureText: '',
+    focusTaskId: null,
+    focusPreset: 25,
+    sheet: null, // 'task-<id>' or 'new' or null
+    draft: null,
+    showDatePicker: false,
+    moreOpen: false,
+    snackbar: '',
+    tasks: [
+      { id: uid(), title: 'Preparar documentación del máster', notes: '', date: 'hoy', time: '18:00', reminder: true, priority: 'P1', done: false, isAhora: true, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Llamar al banco por la hipoteca', notes: '', date: 'hoy', time: '', reminder: false, priority: 'P2', done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Enviar factura a Marta', notes: '', date: 'hoy', time: '', reminder: false, priority: 'P3', done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Revisar presupuesto del viaje', notes: '', date: 'mañana', time: '', reminder: false, priority: 'P2', done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Renovar el pasaporte', notes: '', date: null, time: '', reminder: false, priority: 'P1', done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Comprar regalo cumpleaños de Ana', notes: '', date: null, time: '', reminder: false, priority: null, done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      { id: uid(), title: 'Pensar nombre para el proyecto nuevo', notes: '', date: null, time: '', reminder: false, priority: null, done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+    ],
+  };
+
+  snack(text) {
+    this.setState({ snackbar: text });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ snackbar: '' }), 2200);
+  }
+
+  fmtDate(t) {
+    if (t.date === 'hoy') return 'Hoy';
+    if (t.date === 'mañana') return 'Mañana';
+    if (t.date) { const d = new Date(t.date + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }); }
+    return 'Sin fecha';
+  }
+
+  tagStyle(p, dark) {
+    const c = dark ? DARK : LIGHT;
+    if (p === 'P1') return { display:'inline-flex', alignItems:'center', fontSize:'11px', fontWeight:600, padding:'3px 9px', background:c.a100, color:c.a800 };
+    if (p === 'P2') return { display:'inline-flex', alignItems:'center', fontSize:'11px', fontWeight:600, padding:'3px 9px', border:'1px solid var(--color-accent)', color:'var(--color-accent)' };
+    if (p === 'P3') return { display:'inline-flex', alignItems:'center', fontSize:'11px', fontWeight:600, padding:'3px 9px', background:c.n100, color:c.n800 };
+    return { display:'inline-flex', alignItems:'center', fontSize:'11px', fontWeight:600, padding:'3px 9px', opacity:.4 };
+  }
+
+  view(t, dark) {
+    return {
+      title: t.title,
+      priorityLabel: t.priority || '—',
+      dateLabel: this.fmtDate(t),
+      time: t.time,
+      reminder: t.reminder,
+      tagStyle: this.tagStyle(t.priority, dark),
+      checkMark: t.done ? '✓' : '',
+      toggleDone: () => this.setState(s => ({ tasks: s.tasks.map(x => x.id === t.id ? { ...x, done: !x.done } : x) })),
+      openEdit: () => this.openEdit(t.id),
+    };
+  }
+
+  openEdit(id) {
+    const t = this.state.tasks.find(x => x.id === id);
+    if (!t) return;
+    this.setState({
+      sheet: 'task-' + id,
+      draft: { ...t },
+      showDatePicker: t.date && t.date !== 'hoy' && t.date !== 'mañana',
+      moreOpen: false,
+    });
+  }
+
+  openNew() {
+    this.setState({
+      sheet: 'new',
+      draft: { id: uid(), title: '', notes: '', date: null, time: '', reminder: false, priority: null, done: false, isAhora: false, repeat: 'none', duration: '', list: '' },
+      showDatePicker: false,
+      moreOpen: false,
+    });
+  }
+
+  saveSheet() {
+    const d = this.state.draft;
+    if (!d || !d.title.trim()) return;
+    this.setState(s => {
+      const exists = s.tasks.some(x => x.id === d.id);
+      const tasks = exists ? s.tasks.map(x => x.id === d.id ? d : x) : [d, ...s.tasks];
+      return { tasks, sheet: null, draft: null };
+    });
+    this.snack('Guardado');
+  }
+
+  renderVals() {
+    const dark = this.state.theme === 'dark';
+    const c = dark ? DARK : LIGHT;
+    const themeVars = {
+      '--color-bg': c.bg, '--color-surface': c.surface, '--color-text': c.text,
+      '--color-divider': c.divider, '--color-neutral-100': c.n100, '--color-neutral-800': c.n800,
+      '--color-accent-100': c.a100, '--color-accent-800': c.a800,
+    };
+
+    const primaryBtnStyle = { display:'flex', alignItems:'center', justifyContent:'flex-start', width:'100%', minHeight:'44px', background:'var(--color-accent)', color:c.bg, fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'14px', border:'none', padding:'0 16px', cursor:'pointer' };
+    const primaryBtnStyleCompact = { ...primaryBtnStyle, width:'auto', padding:'0 18px', justifyContent:'center' };
+    const secondaryBtnStyle = { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'44px', background:'transparent', color:'var(--color-text)', border:'1px solid var(--color-divider)', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'14px', padding:'0 16px', cursor:'pointer' };
+    const ghostBtnStyle = { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'40px', background:'transparent', color:'var(--color-accent)', border:'none', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'13px', cursor:'pointer' };
+    const notifBtnStyle = { flex:1, background:'transparent', border:'none', color:'var(--color-accent-700)', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'11.5px', letterSpacing:'.03em', padding:'8px 4px', cursor:'pointer' };
+
+    const screenStyle = { background:'var(--color-bg)', color:'var(--color-text)', fontFamily:'var(--font-body)' };
+
+    const tasks = this.state.tasks;
+    const galleryDark = false; // gallery mirrors current theme via themeVars already
+    const ahora = tasks.find(t => t.isAhora && !t.done) || tasks.find(t => !t.done);
+    const today = tasks.filter(t => t.date === 'hoy' && !t.done && (!ahora || t.id !== ahora.id)).slice(0, 3);
+    const restIds = new Set([ahora && ahora.id, ...today.map(t => t.id)]);
+    const restList = tasks.filter(t => !t.done && !restIds.has(t.id));
+    const inbox = tasks.filter(t => !t.date && !t.priority && !t.done);
+
+    const filterFns = {
+      'Pendientes': t => !t.done,
+      'Próximas': t => !t.done && !!t.date,
+      'Sin fecha': t => !t.done && !t.date,
+      'P1': t => !t.done && t.priority === 'P1',
+    };
+    const filtered = tasks.filter(filterFns[this.state.activeFilter] || filterFns['Pendientes'])
+      .filter(t => t.title.toLowerCase().includes(this.state.searchQuery.toLowerCase()));
+
+    const focusTask = tasks.find(t => t.id === this.state.focusTaskId);
+
+    const dateShortcutBtn = (label, val) => ({
+      label,
+      style: { flex:1, minHeight:'38px', border:'1px solid var(--color-divider)', background: this.state.draft && this.state.draft.date === val ? 'var(--color-accent)' : 'transparent', color: this.state.draft && this.state.draft.date === val ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'12.5px', cursor:'pointer' },
+      onClick: () => {
+        if (val === 'custom') { this.setState({ showDatePicker: true, draft: { ...this.state.draft, date: this.state.draft.date === 'custom-set' ? this.state.draft.date : this.state.draft.date } }); return; }
+        this.setState({ showDatePicker: false, draft: { ...this.state.draft, date: val } });
+      },
+    });
+
+    const priorityBtn = (key) => ({
+      label: key + ' · ' + PRIORITIES[key],
+      style: { flex:1, minHeight:'40px', border:'1px solid var(--color-divider)', background: this.state.draft && this.state.draft.priority === key ? 'var(--color-accent)' : 'transparent', color: this.state.draft && this.state.draft.priority === key ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'11.5px', cursor:'pointer', padding:'0 4px' },
+      onClick: () => this.setState({ draft: { ...this.state.draft, priority: key } }),
+    });
+
+    const navItem = (key, label, icon) => ({
+      label, icon,
+      style: { color: this.state.tab === key ? 'var(--color-accent)' : 'var(--color-text)', opacity: this.state.tab === key ? 1 : .6 },
+      onClick: () => this.setState({ tab: key, restOpen: false }),
+    });
+
+    const draft = this.state.draft || {};
+
+    return {
+      pageStyle: { background:'var(--color-bg)', color:'var(--color-text)', minHeight:'100vh', fontFamily:'var(--font-body)', ...themeVars },
+      screenStyle,
+      themeToggleStyle: { display:'flex', alignItems:'center', gap:'8px', border:'1px solid var(--color-divider)', background:'transparent', color:'var(--color-text)', padding:'9px 16px', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'12.5px', cursor:'pointer' },
+      themeToggleIcon: dark ? '☾' : '☀',
+      themeToggleLabel: dark ? 'Modo oscuro' : 'Modo claro',
+      toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+
+      greeting: 'Buenas tardes',
+      ahoraTask: { title: ahora ? ahora.title : '', priorityLabel: ahora ? ahora.priority || '—' : '', dateLabel: ahora ? this.fmtDate(ahora) : '', tagStyle: ahora ? this.tagStyle(ahora.priority, dark) : {} },
+      galleryToday: today.map(t => this.view(t, dark)),
+      galleryRestCount: restList.length,
+      galleryInbox: inbox.map(t => this.view(t, dark)),
+      galleryAll: tasks.filter(t => !t.done).map(t => this.view(t, dark)),
+      primaryBtnStyle, primaryBtnStyleCompact, secondaryBtnStyle, ghostBtnStyle,
+
+      // interactive phone
+      tabsList: [
+        { label: 'HOY', style: { border:'1px solid var(--color-divider)', background: this.state.tab==='hoy' ? 'var(--color-accent)' : 'transparent', color: this.state.tab==='hoy' ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'11.5px', padding:'8px 14px', cursor:'pointer' }, onClick: () => this.setState({ tab:'hoy' }) },
+        { label: 'BANDEJA', style: { border:'1px solid var(--color-divider)', background: this.state.tab==='bandeja' ? 'var(--color-accent)' : 'transparent', color: this.state.tab==='bandeja' ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'11.5px', padding:'8px 14px', cursor:'pointer' }, onClick: () => this.setState({ tab:'bandeja' }) },
+        { label: 'TAREAS', style: { border:'1px solid var(--color-divider)', background: this.state.tab==='tareas' ? 'var(--color-accent)' : 'transparent', color: this.state.tab==='tareas' ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'11.5px', padding:'8px 14px', cursor:'pointer' }, onClick: () => this.setState({ tab:'tareas' }) },
+      ],
+
+      isFocusScreen: this.state.screen === 'focus',
+      isNotFocusScreen: this.state.screen !== 'focus',
+      focusTaskTitle: focusTask ? focusTask.title : '',
+      focusClock: String(this.state.focusPreset).padStart(2,'0') + ':00',
+      presetsList: [15,25,45].map(m => ({
+        label: m + ' min',
+        style: { border:'1px solid var(--color-divider)', background: this.state.focusPreset===m ? 'var(--color-accent)' : 'transparent', color: this.state.focusPreset===m ? '#fff' : 'var(--color-text)', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'12px', padding:'7px 12px', cursor:'pointer' },
+        onClick: () => this.setState({ focusPreset: m }),
+      })),
+      startFocus: () => this.setState({ screen:'focus', focusTaskId: ahora ? ahora.id : null }),
+      finishFocus: () => { this.setState(s => ({ tasks: s.tasks.map(t => t.id===s.focusTaskId ? {...t, done:true} : t), screen:'main' })); this.snack('Tarea completada'); },
+      snoozeFocus: () => { this.setState(s => ({ tasks: s.tasks.map(t => t.id===s.focusTaskId ? {...t, date:'mañana'} : t), screen:'main' })); this.snack('Pospuesta a mañana'); },
+      exitFocus: () => this.setState({ screen:'main' }),
+
+      isHoyTab: this.state.tab==='hoy', isBandejaTab: this.state.tab==='bandeja', isTareasTab: this.state.tab==='tareas',
+      hasAhora: !!ahora,
+      liveAhora: ahora ? { title: ahora.title, priorityLabel: ahora.priority || '—', dateLabel: this.fmtDate(ahora), reminder: ahora.reminder, time: ahora.time, tagStyle: this.tagStyle(ahora.priority, dark) } : {},
+      openAhoraEdit: () => ahora && this.openEdit(ahora.id),
+      liveToday: today.map(t => this.view(t, dark)),
+      liveRestCount: restList.length,
+      restOpen: this.state.restOpen,
+      liveRest: restList.map(t => this.view(t, dark)),
+      toggleRest: () => this.setState(s => ({ restOpen: !s.restOpen })),
+
+      captureText: this.state.captureText,
+      onCaptureChange: e => this.setState({ captureText: e.target.value }),
+      onCaptureKeyDown: e => { if (e.key === 'Enter') this.saveCaptureAction(); },
+      saveCapture: () => this.saveCaptureAction(),
+      hasInbox: inbox.length > 0, inboxEmpty: inbox.length === 0,
+      liveInbox: inbox.map(t => this.view(t, dark)),
+
+      searchQuery: this.state.searchQuery,
+      onSearchChange: e => this.setState({ searchQuery: e.target.value }),
+      filterChips: Object.keys(filterFns).map(k => ({
+        label: k,
+        style: { background: this.state.activeFilter===k ? 'var(--color-accent)' : 'transparent', color: this.state.activeFilter===k ? '#fff' : 'var(--color-text)', borderColor: this.state.activeFilter===k ? 'var(--color-accent)' : 'var(--color-divider)' },
+        onClick: () => this.setState({ activeFilter: k }),
+      })),
+      liveFiltered: filtered.map(t => this.view(t, dark)),
+
+      navItems: [ navItem('hoy','HOY','⌂ '), navItem('bandeja','BANDEJA','◧ '), navItem('tareas','TAREAS','☑ ') ],
+      fabWrapStyle: { position:'absolute', right:'16px', bottom:'78px' },
+      openNewTask: () => this.openNew(),
+
+      snackbarVisible: !!this.state.snackbar,
+      snackbarText: this.state.snackbar,
+      snackbarStyle: { position:'absolute', left:'16px', right:'16px', bottom:'88px', background:c.text, color:c.bg, padding:'12px 16px', fontSize:'13px', fontWeight:600, boxShadow:'var(--shadow-md)' },
+
+      notifTitle: ahora ? ahora.title : '', notifBody: ahora && ahora.time ? 'Vence a las ' + ahora.time : 'Vence hoy',
+      notifBtnStyle,
+      notifDone: () => { this.setState(s => ({ tasks: s.tasks.map(t => t.id===(ahora&&ahora.id) ? {...t, done:true} : t) })); this.snack('Tarea completada'); },
+      notifSnooze: () => this.snack('Recordatorio +10 min'),
+      notifOpen: () => this.setState({ tab:'hoy', screen:'focus', focusTaskId: ahora ? ahora.id : null }),
+
+      // sheet
+      sheetOpen: !!this.state.sheet,
+      sheetHeading: this.state.sheet === 'new' ? 'Nueva tarea' : 'Editar tarea',
+      sheetPanelStyle: { width:'100%', maxWidth:'380px', maxHeight:'86%', overflow:'auto', background:'var(--color-surface)', color:'var(--color-text)', padding:'20px 20px 24px', boxShadow:'var(--shadow-lg)' },
+      closeSheetBackdrop: () => this.setState({ sheet:null, draft:null }),
+      closeSheet: () => this.setState({ sheet:null, draft:null }),
+      stopProp: e => e.stopPropagation(),
+      draftTitle: draft.title || '', onDraftTitle: e => this.setState({ draft: { ...draft, title: e.target.value } }),
+      draftNotes: draft.notes || '', onDraftNotes: e => this.setState({ draft: { ...draft, notes: e.target.value } }),
+      dateShortcuts: [ dateShortcutBtn('Hoy','hoy'), dateShortcutBtn('Mañana','mañana'), dateShortcutBtn('Elegir fecha','custom') ],
+      showDatePicker: this.state.showDatePicker,
+      draftCustomDate: (draft.date && draft.date!=='hoy' && draft.date!=='mañana') ? draft.date : '',
+      onCustomDate: e => this.setState({ draft: { ...draft, date: e.target.value } }),
+      draftTime: draft.time || '', onDraftTime: e => this.setState({ draft: { ...draft, time: e.target.value } }),
+      showReminderToggle: !!draft.time,
+      reminderSwitchStyle: { width:'40px', height:'22px', background: draft.reminder ? 'var(--color-accent)' : 'var(--color-divider)', position:'relative', cursor:'pointer', flex:'none' },
+      reminderKnobStyle: { width:'16px', height:'16px', background:'#fff', position:'absolute', top:'3px', left: draft.reminder ? '21px' : '3px', transition:'left .15s' },
+      toggleReminder: () => this.setState({ draft: { ...draft, reminder: !draft.reminder } }),
+      priorityOptions: ['P1','P2','P3'].map(priorityBtn),
+      moreOpen: this.state.moreOpen, moreOpenLabel: (this.state.moreOpen ? '− ' : '+ ') + 'Más opciones',
+      toggleMore: () => this.setState(s => ({ moreOpen: !s.moreOpen })),
+      draftRepeat: draft.repeat || 'none', onDraftRepeat: e => this.setState({ draft: { ...draft, repeat: e.target.value } }),
+      draftDuration: draft.duration || '', onDraftDuration: e => this.setState({ draft: { ...draft, duration: e.target.value } }),
+      draftList: draft.list || '', onDraftList: e => this.setState({ draft: { ...draft, list: e.target.value } }),
+      saveBtnStyle: { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'44px', background: draft.title && draft.title.trim() ? 'var(--color-accent)' : 'var(--color-divider)', color:'#fff', border:'none', fontFamily:'var(--font-heading)', fontWeight:800, fontSize:'14px', cursor: draft.title && draft.title.trim() ? 'pointer' : 'not-allowed' },
+      saveDisabled: !(draft.title && draft.title.trim()),
+      saveSheet: () => this.saveSheet(),
+    };
+  }
+
+  saveCaptureAction() {
+    const text = this.state.captureText.trim();
+    if (!text) return;
+    const t = { id: uid(), title: text, notes:'', date:null, time:'', reminder:false, priority:null, done:false, isAhora:false, repeat:'none', duration:'', list:'' };
+    this.setState(s => ({ tasks: [t, ...s.tasks], captureText:'' }));
+    this.snack('Guardado en Bandeja');
+  }
+}
+
+</script>
+</body>
+</html>

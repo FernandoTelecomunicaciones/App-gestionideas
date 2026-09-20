@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-334ae0b3-9885-4376-97da-d4311dec80b7/styles.css">
+  <script src="./doc-page.js"></script>
+  <style>
+    doc-page:not(:defined){visibility:hidden}
+    .spec-h2{border-bottom:2px solid var(--color-divider);padding-bottom:6px;margin-top:40px}
+    .spec-tok{display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--color-divider)}
+    .spec-swatch{width:18px;height:18px;flex:none;border:1px solid var(--color-divider)}
+    .spec-code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--color-surface);padding:2px 6px}
+  </style>
+</helmet>
+
+<doc-page margin="0.85in">
+
+  <div style="font:600 11px var(--font-heading);letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Especificación técnica</div>
+  <h1 style="margin:6px 0 2px">AHORA — handoff de diseño</h1>
+  <p style="font-size:13px;opacity:.65;margin:0 0 20px">Android · Kotlin · Jetpack Compose · Material 3 · Room · DataStore. Documento vivo — acompaña al prototipo <span class="spec-code">AHORA App.dc.html</span>.</p>
+  <hr class="hr">
+
+  <h2 class="spec-h2">1. Arquitectura de información</h2>
+  <p>Tres destinos de navegación inferior (Material 3 <span class="spec-code">NavigationBar</span>), sin cuarta pestaña de ajustes:</p>
+  <table class="table">
+    <thead><tr><th>Destino</th><th>Ruta Compose</th><th>Responsabilidad</th></tr></thead>
+    <tbody>
+      <tr><td>Hoy</td><td><span class="spec-code">home</span></td><td>Una sola pregunta: qué merece atención ahora. Máx. 1 tarjeta "Ahora" + 3 filas + contador colapsado.</td></tr>
+      <tr><td>Bandeja</td><td><span class="spec-code">inbox</span></td><td>Captura en 2–3s. Sólo título obligatorio.</td></tr>
+      <tr><td>Tareas</td><td><span class="spec-code">tasks</span></td><td>Base completa: búsqueda + chips de filtro.</td></tr>
+    </tbody>
+  </table>
+  <p>Ajustes se abre desde un icono en la <span class="spec-code">TopAppBar</span> (no es destino de navegación). El FAB global (+) vive en Hoy, Bandeja y Tareas, y abre la hoja de creación rápida.</p>
+  <p><b>Foco</b> es una pantalla modal de pantalla completa (no lleva barra inferior) alcanzada sólo desde "Empezar". <b>Editar/crear tarea</b> es un <span class="spec-code">ModalBottomSheet</span> sobre la pantalla actual, nunca una pantalla nueva.</p>
+
+  <h2 class="spec-h2">2. Tokens de diseño</h2>
+  <p>Heredados del sistema Modernist (<span class="spec-code">styles.css</span>) — mono-acento, sin radios, reglas de 2px. Reimplementar en Compose como <span class="spec-code">ColorScheme</span> + objeto <span class="spec-code">AhoraTokens</span>.</p>
+  <div class="spec-tok"><div class="spec-swatch" style="background:#f3f2f2"></div>color.bg — claro <span class="spec-code">#f3f2f2</span> / oscuro <span class="spec-code">#1a1817</span></div>
+  <div class="spec-tok"><div class="spec-swatch" style="background:#eae9e9"></div>color.surface (tarjetas, inputs) — claro <span class="spec-code">#eae9e9</span> / oscuro <span class="spec-code">#252221</span></div>
+  <div class="spec-tok"><div class="spec-swatch" style="background:#201e1d"></div>color.text — claro <span class="spec-code">#201e1d</span> / oscuro <span class="spec-code">#f3f1ef</span></div>
+  <div class="spec-tok"><div class="spec-swatch" style="background:#ec3013"></div>color.accent (único, mismo en ambos modos) <span class="spec-code">#ec3013</span></div>
+  <div class="spec-tok"><div class="spec-swatch" style="background:#000;opacity:.35"></div>color.divider — regla de 2px, 40% del texto sobre el fondo</div>
+  <p style="margin-top:10px">Tipografía: <span class="spec-code">Archivo</span> (heading 800, body 400) para todo — un único par tipográfico, sin sistema secundario. Radios: <b>0dp en toda la app</b> (contradice el M3 por defecto — decisión de marca deliberada). Elevación: sombras suaves tintadas de tinta en claro; borde + oscuridad ambiental en oscuro — nunca <span class="spec-code">tonalElevation</span> por defecto de M3.</p>
+  <table class="table">
+    <thead><tr><th>Espaciado</th><th>Valor</th></tr></thead>
+    <tbody>
+      <tr><td>space-1 / space-2 / space-3</td><td>4dp / 8dp / 12dp</td></tr>
+      <tr><td>space-4 / space-6 / space-8</td><td>16dp / 24dp / 32dp</td></tr>
+      <tr><td>Área táctil mínima</td><td>48×48dp (checkbox visual 22dp + padding táctil)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="spec-h2">3. Pantalla Hoy</h2>
+  <ul>
+    <li>Encabezado contextual (franja horaria) + pregunta "¿Qué toca ahora?" — nunca lista de tareas por defecto.</li>
+    <li><b>Ahora</b>: tarjeta con borde de 1px (no relleno de color) — título 17/800, tag de prioridad + fecha, botón "Empezar" ancho completo.</li>
+    <li><b>Tus 3 de hoy</b>: máx. 3 filas de 56dp, checkbox tocable a la izquierda, tag de prioridad a la derecha (texto siempre visible, nunca sólo color).</li>
+    <li><b>También pendiente · N</b>: fila de texto, sin badge rojo agresivo — pulsar expande inline, no navega.</li>
+    <li>Tareas vencidas: mismo tratamiento visual que las demás; sin rojo intenso, sin contadores de fallos, sin lenguaje de culpa.</li>
+  </ul>
+
+  <h2 class="spec-h2">4. Pantalla Bandeja</h2>
+  <ul>
+    <li>Campo de captura siempre visible arriba: placeholder "¿Qué tienes en la cabeza?" + botón Guardar.</li>
+    <li>Guardar con sólo título es válido — <span class="spec-code">Room</span> no exige fecha/prioridad/categoría.</li>
+    <li>Atajos "Hoy · Fecha · Prioridad" son chips opcionales bajo el campo — nunca bloquean el guardado.</li>
+    <li>Lista "Sin decidir todavía": filas de una línea, sin metadatos (fuerza la decisión a "Editar", no en la bandeja).</li>
+    <li>Vacío: "Todo fuera de tu cabeza." — sin ilustración infantil, sin confeti.</li>
+  </ul>
+
+  <h2 class="spec-h2">5. Pantalla Tareas</h2>
+  <ul>
+    <li>Búsqueda + 4 chips de filtro de un solo nivel: Pendientes (por defecto) · Próximas · Sin fecha · P1.</li>
+    <li>Completadas accesibles pero no dominantes: enlace de texto discreto, no una sección larga siempre visible.</li>
+  </ul>
+
+  <h2 class="spec-h2">6. Crear / editar tarea (bottom sheet)</h2>
+  <table class="table">
+    <thead><tr><th>Campo</th><th>Obligatorio</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr><td>Título</td><td>Sí</td><td><span class="spec-code">OutlinedTextField</span></td></tr>
+      <tr><td>Notas</td><td>No</td><td><span class="spec-code">TextField</span> multilínea</td></tr>
+      <tr><td>Fecha</td><td>No</td><td>3 chips (Hoy / Mañana / Elegir fecha) → <span class="spec-code">DatePickerDialog</span></td></tr>
+      <tr><td>Hora</td><td>No</td><td><span class="spec-code">TimePicker</span> — al fijarla, aparece el toggle de recordatorio inmediatamente debajo</td></tr>
+      <tr><td>Recordatorio</td><td>No (fácil si hay hora)</td><td><span class="spec-code">Switch</span> M3</td></tr>
+      <tr><td>Prioridad</td><td>No</td><td>Segmented de 3: P1 Importante / P2 Normal / P3 Puede esperar</td></tr>
+      <tr><td>Más opciones</td><td>—</td><td>Disclosure colapsado: repetición, duración estimada, lista/categoría</td></tr>
+    </tbody>
+  </table>
+  <p>Guardar deshabilitado hasta que el título tenga contenido no vacío (trim). Sin validación agresiva ni mensajes de error para campos opcionales.</p>
+
+  <h2 class="spec-h2">7. Pantalla Foco</h2>
+  <p>Pantalla completa, sin barra inferior, sin lista de tareas visible, sin estadísticas ni gamificación. Título de la tarea + "Sólo esto ahora." + presets opcionales (15/25/45 min) + tres acciones: <b>Terminar</b> (marca hecha, vuelve a Hoy), <b>Posponer</b> (mueve a mañana, snackbar de confirmación), <b>Salir</b> (vuelve sin cambios).</p>
+
+  <h2 class="spec-h2">8. Notificación del sistema</h2>
+  <p><span class="spec-code">NotificationCompat</span> con acciones directas (sin abrir la app): <b>HECHO</b> completa la tarea desde la notificación, <b>+10 MIN</b> reprograma el recordatorio, <b>ABRIR</b> lleva directo a Foco con esa tarea. Cuerpo: "Vence a las HH:MM" — nunca lenguaje de urgencia o culpa.</p>
+
+  <h2 class="spec-h2">9. Ajustes</h2>
+  <p>Secciones fijas y pequeñas: Recordatorios · Apariencia · Comportamiento · Datos · Acerca de. Nada de configuración obligatoria antes de usar la app — todo tiene un valor por defecto sensato.</p>
+
+  <h2 class="spec-h2">10. Estados e interacción</h2>
+  <ul>
+    <li><b>Pressed</b>: acento un paso más oscuro en la ramp (600 claro / 400 oscuro) — nunca opacidad genérica del sistema.</li>
+    <li><b>Disabled</b>: opacidad 45%, cursor/interacción bloqueada (botón Guardar sin título).</li>
+    <li><b>Focus (teclado/lector)</b>: contorno de 2px en acento, offset 2px — nunca el azul por defecto de Android.</li>
+    <li><b>Vacío</b>: frase corta, sin infantilizar, sin ilustración de celebración.</li>
+    <li><b>Transiciones</b>: Hoy→Foco y hoja de edición usan <span class="spec-code">MotionScheme</span> M3 estándar (fadeThrough / sharedAxis-Y para el bottom sheet), 200–300ms, sin efectos de partículas ni confeti.</li>
+    <li><b>Confirmaciones</b>: acciones reversibles o de bajo riesgo (guardar captura, guardar tarea, posponer) se confirman con <span class="spec-code">Snackbar</span> discreta, no con diálogo modal — no interrumpen el flujo.</li>
+  </ul>
+
+  <h2 class="spec-h2">11. Accesibilidad</h2>
+  <ul>
+    <li>Prioridad nunca depende sólo del color: siempre acompañada de la etiqueta de texto "P1/P2/P3".</li>
+    <li>Contraste texto ≥ 4.5:1 sobre fondo y superficie en ambos temas; el acento sobre fondo se usa para iconografía/chrome (≥3:1), nunca para párrafos de cuerpo.</li>
+    <li>Áreas táctiles ≥ 48×48dp en checkboxes, chips y botones de navegación.</li>
+    <li>Todos los controles interactivos son alcanzables por lector de pantalla con rol y estado (<span class="spec-code">contentDescription</span>, <span class="spec-code">stateDescription</span> en checkboxes/switches).</li>
+  </ul>
+
+  <h2 class="spec-h2">12. Mapeo a componentes Compose / M3</h2>
+  <table class="table">
+    <thead><tr><th>Elemento del prototipo</th><th>Componente Compose</th></tr></thead>
+    <tbody>
+      <tr><td>Barra inferior (Hoy/Bandeja/Tareas)</td><td><span class="spec-code">NavigationBar</span> + <span class="spec-code">NavigationBarItem</span>, 3 items fijos</td></tr>
+      <tr><td>Botón + flotante</td><td><span class="spec-code">FloatingActionButton</span>, esquina inferior derecha, visible en Hoy/Bandeja/Tareas, oculto en Foco</td></tr>
+      <tr><td>Tarjeta "Ahora" / filas de tarea</td><td><span class="spec-code">OutlinedCard</span> (Ahora) y <span class="spec-code">ListItem</span> (filas), radio 0dp forzado vía <span class="spec-code">Shapes</span> override</td></tr>
+      <tr><td>Hoja crear/editar tarea</td><td><span class="spec-code">ModalBottomSheet</span></td></tr>
+      <tr><td>Chips de filtro / fecha / prioridad</td><td><span class="spec-code">FilterChip</span> (Tareas, atajos de fecha) y <span class="spec-code">SegmentedButton</span> (prioridad P1/P2/P3)</td></tr>
+      <tr><td>Recordatorio on/off</td><td><span class="spec-code">Switch</span> M3</td></tr>
+      <tr><td>Confirmaciones ("Guardado", "Pospuesta a mañana")</td><td><span class="spec-code">Snackbar</span> vía <span class="spec-code">SnackbarHost</span>, duración corta (~2.2s), una acción máx.</td></tr>
+      <tr><td>Notificación del sistema</td><td><span class="spec-code">NotificationCompat.Builder</span> + <span class="spec-code">addAction</span> ×3 (HECHO / +10 MIN / ABRIR), sin <span class="spec-code">BigTextStyle</span> agresivo</td></tr>
+      <tr><td>Iconos de navegación/checkbox</td><td>Lucide vía <span class="spec-code">painterResource</span> vectorial (home, inbox, check-square para la barra; check para el checkbox) — los glifos ⌂ ◧ ☑ del prototipo HTML son sólo marcadores de posición</td></tr>
+    </tbody>
+  </table>
+  <p>Persistencia: <span class="spec-code">Room</span> para tareas (título, notas, fecha, hora, recordatorio, prioridad, repetición, duración, lista, estado done); <span class="spec-code">DataStore</span> para tema (claro/oscuro/sistema) y último filtro usado en Tareas. Recordatorios programados con <span class="spec-code">AlarmManager</span> (exact alarm) + <span class="spec-code">WorkManager</span> como respaldo tras reinicio.</p>
+
+  <h2 class="spec-h2">13. Notas de la revisión de diseño</h2>
+  <p><i>TDAH / carga cognitiva</i> — máximo 1 decisión visible a la vez en Hoy; captura sin fricción en Bandeja; "también pendiente" colapsado evita la sobrecarga de lista larga.</p>
+  <p><i>UX Android senior</i> — patrones nativos M3 (bottom nav, FAB, bottom sheet, switch, chips) en vez de metáforas iOS; gestos y áreas táctiles estándar de Compose.</p>
+  <p><i>Accesibilidad</i> — prioridad con texto + color, contraste verificado en ambos temas, foco de teclado visible, sin dependencia exclusiva del color para estado.</p>
+
+</doc-page>
+
+</x-dc>
+</body>
+</html>
