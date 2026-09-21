@@ -23,6 +23,7 @@ import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -66,12 +67,17 @@ class EditorViewModel @Inject constructor(
 
     fun openNew() {
         refreshPermissions()
+        loading?.cancel()
         publish(EditorDraft())
     }
 
+    /** The one pending read of [openEdit]; any other open/dismiss supersedes it (GC-07). */
+    private var loading: Job? = null
+
     fun openEdit(taskId: Long) {
         refreshPermissions()
-        viewModelScope.launch {
+        loading?.cancel()
+        loading = viewModelScope.launch {
             val task = repository.get(taskId)
             if (task == null || task.done) {
                 actions.say(R.string.snack_no_longer_pending)
@@ -82,7 +88,10 @@ class EditorViewModel @Inject constructor(
     }
 
     /** Cancelar / back / scrim / swipe down: discard (PRODUCT_SPEC §3.3). */
-    fun dismiss() = publish(null)
+    fun dismiss() {
+        loading?.cancel()
+        publish(null)
+    }
 
     fun onTitle(value: String) = update { it.withTitle(value) }
     fun onNotes(value: String) = update { it.withNotes(value) }

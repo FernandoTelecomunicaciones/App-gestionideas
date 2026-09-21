@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.fernando.ahora.domain.ReminderPermissionSource
 import com.fernando.ahora.domain.ReminderPermissionState
@@ -28,8 +27,8 @@ class ReminderPermissions @Inject constructor(
         exactAlarmsNeedSpecialAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
     )
 
-    /** POST_NOTIFICATIONS (API 33+) and the app-level / channel toggle. */
-    fun notificationsGranted(): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    /** POST_NOTIFICATIONS (API 33+), the app-level toggle and the reminders channel (GC-03). */
+    fun notificationsGranted(): Boolean = AndroidReminderNotifier.canPostReminders(context)
 
     /** True when the runtime permission can still be requested (API 33+ and not yet granted). */
     fun needsRuntimeNotificationPermission(): Boolean =

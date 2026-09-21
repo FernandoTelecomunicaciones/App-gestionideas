@@ -11,6 +11,7 @@ import com.fernando.ahora.domain.TaskRepository
 import com.fernando.ahora.domain.model.Priority
 import com.fernando.ahora.domain.model.Task
 import com.fernando.ahora.domain.model.TaskFields
+import com.fernando.ahora.domain.rules.TaskRules
 import com.fernando.ahora.ui.common.TaskActions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -61,8 +62,9 @@ class InboxViewModel @Inject constructor(
     fun today(): LocalDate = time.today()
 
     fun onCapture(value: String) {
-        capture = value
-        savedState[KEY_TEXT] = value
+        val text = value.take(TaskRules.MAX_TITLE) // same limit the backup accepts (GC-09)
+        capture = text
+        savedState[KEY_TEXT] = text
     }
 
     fun toggleToday() = setDate(if (chipDate == time.today()) null else time.today())

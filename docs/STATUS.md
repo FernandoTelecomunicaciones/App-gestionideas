@@ -1,18 +1,18 @@
 # AHORA — Status
 
-**Checkpoint: 2026-09-20 (late) — user-facing MVP built, before Gate C.** Branch `claude-pruebas` · HEAD `084627a` (engine hardened after Gate B) · **the whole UI milestone is in the working tree, uncommitted** (§6).
+**Checkpoint: 2026-09-21 — Codex Gate C done and its fixes applied.** Branch `claude-pruebas` · HEAD `04cedc8` (the full user-facing MVP, committed) · **the Gate C fixes, their 23 regression tests and the doc updates are in the working tree, uncommitted** (§6). Gate D has **not** been started.
 
-> **Read this first:** the app is now usable end to end. Hoy, Bandeja (quick capture), Tareas, the create/edit sheet, Foco and Ajustes are real native Compose screens on the real Room repository; notification body / ABRIR navigation works cold and warm; the theme (System/Light/Dark) persists; JSON export/import works. The reminder engine was **not** modified. What is *not* done: Codex Gate C, the device matrix beyond one Android 16 emulator, TalkBack, screenshot tests, hardening/release packaging (M11/M12).
+> **Read this first:** the app is usable end to end (Hoy, Bandeja + quick capture, Tareas, create/edit sheet, Foco, Ajustes, themes, JSON export/import, reminder permission UX, notification navigation cold and warm). Codex Gate C reviewed the whole tree: **0 CRITICAL, 12 IMPORTANT, 1 OPTIONAL as reported**; after independent verification 8 were fixed, 1 was shown not to reproduce on the device, and 4 were rejected or deferred with reasons (DECISIONS › Gate C, D-34, ARCHITECTURE §20). What is *not* done: any device other than one Android 16 emulator, TalkBack, screenshot tests, release signing/versioning (M12); the CI workflow has never run on GitHub.
 
 ## 1. Last verified build (forced re-run, `--rerun-tasks`)
 
 | Task | Result |
 |---|---|
-| `testDebugUnitTest` | ✅ **300 tests, 0 failures, 0 skipped** (176 engine/data + 124 new for the UI and backup) |
+| `testDebugUnitTest` | ✅ **323 tests, 0 failures, 0 skipped** (300 before Gate C + 23 Gate C regression tests) |
 | `lintDebug` | ✅ **0 errors, 10 warnings** (§5) |
 | `assembleDebug` | ✅ (APK 14.5 MB) |
-| `assembleRelease` (R8 + resource shrinking) | ✅ (unsigned APK 2.4 MB). Signed with the debug key and exercised on the emulator: Hilt graph, type-safe routes (`Focus(taskId)`), Room, DataStore, capture → editor → Hoy → Foco → Terminar all work under R8. |
-| Release manifest | ✅ no `INTERNET`, no `DebugCommandReceiver` |
+| `assembleRelease` (R8 + resource shrinking) | ✅ builds (**unsigned** APK 2.4 MB). The R8 build was signed with the debug key and exercised on the emulator at the *previous* checkpoint (Hilt graph, type-safe routes, Room, DataStore, capture → editor → Hoy → Foco → Terminar); **that signed smoke was not repeated after the Gate C fixes** — only the build itself was. |
+| Release manifest / dex | ✅ no `INTERNET` permission, no `DebugCommandReceiver` (manifest and dex re-checked on the final build) |
 
 Toolchain unchanged (D-30). New test dependency: `androidx.navigation:navigation-testing`.
 
@@ -31,6 +31,13 @@ Toolchain unchanged (D-30). New test dependency: `androidx.navigation:navigation
 | `NavigationTest` | 16 | bottom bar, back from tabs, chrome only on tabs; Empezar; leave-Foco idempotent; **body → Hoy from Bandeja/Tareas/Ajustes/Foco; ABRIR cold and warm from each tab and Ajustes ⇒ `[Home, Focus]`, back ⇒ Hoy**; same Foco not restarted; another task replaces it; deleted/done/unknown task ⇒ Hoy (with the real `NotificationLinkHandler`) |
 | `ScreensComposeTest` | 16 | rendered Hoy/Bandeja/Tareas/Foco: copy, loading shows nothing, ≤ 3 rows, priority always as text, overdue has no blame copy, Guardar disabled/enabled, recurring completed checkbox is read-only, Foco shows only its content |
 | `FormattingTest` | 3 | date labels; year; **DatePicker UTC-midnight conversion** |
+| **Gate C:** `GateCDomainTest` | 8 | dates beyond 1900–2200 rejected on import (due date and anchor) and dropped by `normalize`; the whole supported range imports; text capped at the backup limits and **an export saved at the limits re-imports** |
+| **Gate C:** `GateCRepositoryTest` | 5 | a failing re-plan after commit does not fail `create`/`complete`/`edit`/`postpone`/`delete`/import and keeps the Undo token; **`undoComplete` refuses an edited successor** and still removes an untouched one |
+| **Gate C:** `GateCEditorTest` | 5 | a slow `openEdit` read cannot reopen a dismissed sheet, overwrite another task's draft or a new blank draft (held-result gate); typing stops at the limits |
+| **Gate C:** `GateCUiTest` | 3 | a switch is found by its name and exposes on/off; every `TaskActions` write that throws becomes a message, not an uncaught exception |
+| **Gate C:** `AndroidRemindersRobolectricTest` (+2) | 2 | a blocked reminders channel ⇒ `canNotify()` and the permission snapshot say "no"; posting into it is a permanent failure |
+
+Each Gate C fix was mutation-checked: reverting it makes its regression test fail (GC-07, 06, 05 ×2, 03, 04, 09; GC-08 is a structural test).
 
 ## 2. Milestones
 
@@ -52,7 +59,7 @@ Toolchain unchanged (D-30). New test dependency: `androidx.navigation:navigation
 
 ## 3. Codex review gates
 
-Review #1, review #2, Gate A, Gate B: done (see DECISIONS). **Gate C is next** and should cover the UI code; carry these conditions: (1) a narrow re-review of the Gate B fixes (never re-reviewed); (2) the device matrix in §4; (3) the deviations in DECISIONS D-33.
+Review #1, review #2, Gate A, Gate B, **Gate C**: done (see DECISIONS). Gate C covered the whole working tree and re-reviewed the Gate B fixes (they hold, apart from the accepted GB-01 residual window). **Gate D is not started.** What still blocks an APK release is in §7.
 
 ## 4. Device / emulator verification (Android 16 emulator, `ahora_api36`)
 
@@ -76,7 +83,17 @@ Everything from the previous checkpoint still stands (engine behaviours). **New 
 | System font scale 2.0 | Hoy and the editor show no clipped copy; the sheet scrolls under the IME |
 | Release (R8) build, signed with the debug key | capture → editor → Hoy → Foco → Terminar all work |
 
+**Gate C session (same emulator, debug build after the fixes):**
+
+| Flow | Result |
+|---|---|
+| Task retained in Recents, process **killed** (before and after the alarm), Ajustes as the last screen; tap **ABRIR** on the card | Foco; back → Hoy |
+| Same setup; tap the notification **body** | Hoy (Ajustes gone); back leaves the app |
+| Accessibility tree of the Ajustes "Mantener pantalla encendida" switch | checkable node + a labelled child node — the same structure the labelled checkboxes have. **Not** verified with TalkBack. |
+| Final debug build: launch, FAB opens the sheet, typing works, system back closes it | ✔ (smoke only) |
+
 ### ⬜ NOT verified (do not treat as working)
+- Gate C fixes with no device evidence: reminders channel blocked in system settings (JVM/Robolectric only), the editor's reminder switch label (the Ajustes one was inspected), Hoy/Mañana at midnight (no automated test; verified by reading), export/import of an at-limit file on the device.
 - TalkBack (semantics were inspected through the accessibility tree only), predictive back for the sheet, the 200 % font scale on Bandeja/Tareas/Ajustes/Foco, keyboard/D-pad focus rings, contrast measured on rendered screens.
 - Light-theme screenshots were inspected by eye only; there are no screenshot tests.
 - Android 12/13/14 and API 26 devices, physical devices, OEM battery behaviour, reboot before unlock, device-transfer restore (A9), the CI workflow.
@@ -93,12 +110,22 @@ Everything from the previous checkpoint still stands (engine behaviours). **New 
 5. Bottom bar is 56 dp with a 2 px rule; the design's is slightly shorter.
 
 **Product/engineering**
-6. A notification link closes an open editor sheet and discards its draft (D-33 #7).
+6. A notification link closes an open editor sheet and discards its draft (D-33 #7) — accepted limitation (Gate C: the modal must close to show the destination). Foco in landscape needs a scroll to reach Salir (system back is the same action) — accepted limitation.
 7. After the system refuses the notification dialog for good, the first tap on "Permitir" may show nothing before it turns into "Abrir ajustes" (the platform gives no way to know beforehand).
 8. Lint warnings (10, none blocking): 5 `UnusedResources` (Lucide icons `chevron-down/up`, `x`, `search`, `trash-2` bundled for the design set but not used by any screen), 2 `UseKtx`, `OldTargetApi` (targetSdk 36 vs 37), `ExportedReceiver` (debug-only command receiver), `ObsoleteSdkInt` (`mipmap-anydpi-v26`).
 9. `PRODUCT_SPEC.md` still says "Draft v1"; its requirements were followed as written (deviations: DECISIONS D-33).
-10. From the previous checkpoint and unchanged: Robolectric runs at SDK 34 while `targetSdk` is 36; `./gradlew clean` can fail on Windows while a shell holds `app/build/test-results` as cwd; residual GB-01 window; release signing/versioning not set up; `DebugCommandReceiver` is debug-only (verified absent from release).
+10. Gate C residuals **accepted, not fixed**: the check-then-cancel window of a stale action against a just-posted newer card (GC-02: needs revision-specific notification ids); a failed SAF export can leave a partial file in the document the user chose (GC-10); no Activity-level/instrumented test of `MainActivity` link handling or of receiver deadlines (GC-11 — verified on the device instead).
+11. From the previous checkpoint and unchanged: Robolectric runs at SDK 34 while `targetSdk` is 36; `./gradlew clean` can fail on Windows while a shell holds `app/build/test-results` as cwd; residual GB-01 window; release signing/versioning not set up; `DebugCommandReceiver` is debug-only (verified absent from release).
 
 ## 6. Git state
 
-Branch `claude-pruebas`, HEAD `084627a`. **Nothing from this session is committed.** Working tree: 8 modified files (`MainActivity`, `DataModule`, `ReminderPermissions`, `strings.xml`, `build.gradle.kts`, `libs.versions.toml`, `ARCHITECTURE.md`, `DECISIONS.md`) plus this file, and 43 new files (`ui/**` ≈ 3 900 lines, `domain/{AppPreferences,ReminderPermissionState,backup/BackupCodec,model/ThemeMode}`, `core/time/ClockTicker`, `data/prefs/DataStoreAppPreferences`, and the new tests). Build, 300 tests, lint (0 errors) and the release build are green on exactly this tree, so **it is a clean point for a commit** — I have not made one.
+Branch `claude-pruebas`, HEAD `04cedc8` (the UI MVP). **Nothing from Gate C is committed.** Working tree: 16 modified files (`TaskRules`, `BackupCodec`, `TaskRepositoryImpl`, `TaskActions`, `EditorViewModel`, `EditorDraft`, `EditorSheet`, `InboxViewModel`, `Controls`, `SettingsScreen`, `SettingsViewModel`, `AndroidReminderNotifier`, `ReminderPermissions`, `strings.xml`, `.github/workflows/build.yml`, one Robolectric test) + the docs (`STATUS`, `DECISIONS`, `ARCHITECTURE`, `PRODUCT_SPEC`) + 4 new test files (`GateCDomainTest`, `GateCRepositoryTest`, `GateCEditorTest`, `GateCUiTest`). Build, 323 tests, lint (0 errors) and the release build are green on exactly this tree, so it is a clean point for a commit — I have not made one.
+
+## 7. Before Gate D / an APK release
+
+1. **Release signing and versioning** (M12, GC-12): `assembleRelease` is unsigned; needs the owner's keystore (never in the repo) and a `versionCode/versionName` policy.
+2. **Device matrix** (ARCHITECTURE §15.4 / §17.1): at least API 26, one Android 12–14 and one physical device; reboot, TIME_SET/zone/DST on a real alarm, exact-alarm revoke/re-grant, blocked channel, OEM battery behaviour.
+3. **TalkBack pass** at 100 % and 200 % font scale (A11Y-04/05) — an acceptance requirement, currently only inspected through the accessibility tree.
+4. **Run the CI workflow** on GitHub once (it now includes `assembleRelease`).
+5. Repeat the signed-release smoke on the emulator after the Gate C fixes.
+6. Optional hardening: screenshot tests; Activity-level tests for cold/warm/restored notification entry.

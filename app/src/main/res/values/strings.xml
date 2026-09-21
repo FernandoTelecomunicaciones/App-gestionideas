@@ -139,6 +139,8 @@
     <string name="settings_exact_alarms">Alarmas exactas</string>
     <string name="settings_state_allowed">Permitidas</string>
     <string name="settings_state_not_allowed">No permitidas</string>
+    <string name="switch_state_on">Activado</string>
+    <string name="switch_state_off">Desactivado</string>
     <string name="settings_state_not_needed">No hace falta</string>
     <string name="settings_exact_off_detail">Los avisos pueden llegar con algunos minutos de retraso.</string>
     <string name="settings_notifications_off_detail">No verás ningún aviso.</string>

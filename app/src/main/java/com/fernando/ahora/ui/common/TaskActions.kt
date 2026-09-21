@@ -73,29 +73,43 @@ class TaskActions @Inject constructor(
         }
     }
 
-    fun complete(id: Long): Job = scope.launch {
+    fun complete(id: Long): Job = guarded {
         val result = repository.complete(id)
         if (result.completed) messenger.post(UiMessage(R.string.snack_completed, UndoToken.Complete(result)))
     }
 
     /** Completadas → checkbox. Refused (false) for recurring occurrences; the UI does not offer it there. */
-    fun reopen(id: Long): Job = scope.launch { repository.reopen(id) }
+    fun reopen(id: Long): Job = guarded { repository.reopen(id) }
 
-    fun postpone(id: Long): Job = scope.launch {
+    fun postpone(id: Long): Job = guarded {
         val result = repository.postpone(id)
         if (result != null) messenger.post(UiMessage(R.string.snack_postponed, UndoToken.Postpone(result)))
     }
 
-    fun delete(id: Long): Job = scope.launch {
+    fun delete(id: Long): Job = guarded {
         val removed = repository.delete(id)
         if (removed != null) messenger.post(UiMessage(R.string.snack_deleted, UndoToken.Delete(removed)))
     }
 
-    fun undo(token: UndoToken): Job = scope.launch {
+    fun undo(token: UndoToken): Job = guarded {
         when (token) {
             is UndoToken.Complete -> repository.undoComplete(token.result)
             is UndoToken.Postpone -> repository.undoPostpone(token.result)
             is UndoToken.Delete -> repository.undoDelete(token.task)
+        }
+    }
+
+    /**
+     * These run in the application scope, which has no handler: an exception escaping here (a Room I/O failure) would
+     * end the process. Report it like a failed save instead (GC-05).
+     */
+    private fun guarded(block: suspend () -> Unit): Job = scope.launch {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            messenger.post(UiMessage(R.string.snack_save_failed))
         }
     }
 

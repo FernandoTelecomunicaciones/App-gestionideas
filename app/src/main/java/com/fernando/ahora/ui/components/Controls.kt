@@ -194,6 +194,7 @@ fun AhoraCheckbox(
 fun AhoraSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    label: String,
     stateOn: String,
     stateOff: String,
     modifier: Modifier = Modifier,
@@ -204,14 +205,19 @@ fun AhoraSwitch(
         modifier = modifier
             .size(48.dp)
             .focusRing(source)
+            // The visible label is a sibling Text; without a name TalkBack would read only "Activado, interruptor" (GC-08).
+            // Same order as AhoraCheckbox (semantics before toggleable): that is the arrangement verified on the device.
+            .semantics {
+                contentDescription = label
+                stateDescription = if (checked) stateOn else stateOff
+            }
             .toggleable(
                 value = checked,
                 interactionSource = source,
                 indication = null,
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
-            )
-            .semantics { stateDescription = if (checked) stateOn else stateOff },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.size(width = 40.dp, height = 22.dp).background(if (checked) c.accentFill else c.controlOutline)) {

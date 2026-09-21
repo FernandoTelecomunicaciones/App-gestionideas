@@ -119,6 +119,7 @@ Backend / sync / accounts · analytics or crash-reporting SDKs · AI features ·
 4. `recurrence != none ⇒ dueDate != null`.
 5. `priority ∈ {null, 1, 2, 3}`.
 6. Inbox membership = `!done ∧ dueDate = null ∧ priority = null` (derived, no stored status).
+7. Limits (Gate C, DECISIONS D-34): `title` ≤ 1 000, `notes` ≤ 20 000, `list` ≤ 200 characters (typing stops there); `dueDate`/recurrence anchor within 1900-01-01 … 2200-12-31. The same limits bind the backup file, so an export always re-imports.
 
 UI consequence `[G]`: picking a time with no date auto-selects the date (**Hoy**, or **Mañana** if that time has already passed today — the selected chip makes this visible). Repeat is disabled until a date exists. Clearing the date clears time, reminder and recurrence.
 

@@ -28,9 +28,9 @@ object BackupCodec {
     /** A personal task list is hundreds of rows; anything beyond these is not a copy AHORA made. */
     const val MAX_CHARS = 8 * 1024 * 1024
     const val MAX_TASKS = 50_000
-    const val MAX_TITLE = 1_000
-    const val MAX_NOTES = 20_000
-    const val MAX_LIST = 200
+    const val MAX_TITLE = TaskRules.MAX_TITLE
+    const val MAX_NOTES = TaskRules.MAX_NOTES
+    const val MAX_LIST = TaskRules.MAX_LIST
 
     private const val MAX_EPOCH_MS = 32_503_680_000_000L // year 3000
 

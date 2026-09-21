@@ -1,5 +1,6 @@
 package com.fernando.ahora.data
 
+import android.util.Log
 import androidx.room.withTransaction
 import com.fernando.ahora.core.time.TimeProvider
 import com.fernando.ahora.data.local.AhoraDatabase
@@ -24,6 +25,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -47,6 +49,32 @@ internal class TaskRepositoryImpl @Inject constructor(
 
     private fun clock() = Clock(time.now(), time.zone())
 
+    /**
+     * Re-plan the alarm cursor AFTER the commit. Room is the truth and the alarm is a rebuildable cache, so a re-plan
+     * that fails (both AlarmManager calls throwing, a failed read) must not turn a committed write into a "failed
+     * save": the caller would show an error for data that exists and lose its Undo token. The next receiver / app
+     * start reconciles (ARCHITECTURE §10.4). Cancellation still propagates (GC-05).
+     */
+    private suspend fun replan(taskIds: Set<Long>, reason: String) {
+        try {
+            reminderSync.onTasksChanged(taskIds, reason)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "re-plan after $reason failed; the next reconcile heals it", e)
+        }
+    }
+
+    private suspend fun resetReminders(reason: String) {
+        try {
+            reminderSync.resetAll(reason)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "reminder reset after $reason failed; the next reconcile heals it", e)
+        }
+    }
+
     override fun observePending(): Flow<List<Task>> = dao.observePending().map { rows -> rows.map { it.toDomain() } }
     override fun observeCompleted(): Flow<List<Task>> = dao.observeCompleted().map { rows -> rows.map { it.toDomain() } }
     override fun observe(id: Long): Flow<Task?> = dao.observeById(id).map { it?.toDomain() }
@@ -56,7 +84,7 @@ internal class TaskRepositoryImpl @Inject constructor(
         val f = TaskRules.normalize(fields) ?: return null
         val c = clock()
         val id = db.withTransaction { dao.insert(newTask(f, c).toEntity()) }
-        reminderSync.onTasksChanged(setOf(id), "create")
+        replan(setOf(id), "create")
         return id
     }
 
@@ -106,7 +134,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             dao.update(updated.toEntity())
             EditResult.Saved(updated)
         }
-        if (result is EditResult.Saved && scheduleChanged) reminderSync.onTasksChanged(setOf(id), "edit")
+        if (result is EditResult.Saved && scheduleChanged) replan(setOf(id), "edit")
         return result
     }
 
@@ -134,7 +162,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             }
             CompleteResult(id, completed = true, successorId = successorId, revisionAfter = revisionAfter)
         }
-        if (result.completed) reminderSync.onTasksChanged(setOfNotNull(id, result.successorId), "complete")
+        if (result.completed) replan(setOfNotNull(id, result.successorId), "complete")
         return result
     }
 
@@ -153,12 +181,15 @@ internal class TaskRepositoryImpl @Inject constructor(
             if (successorId != null) {
                 val successor = dao.getById(successorId)
                 if (successor == null || successor.done) return@withTransaction false
+                // GC-06: an occurrence the user has edited since it was generated carries their work; the undo
+                // must not delete it (same outcome as "the series has moved on").
+                if (successor.updatedAt != successor.createdAt) return@withTransaction false
                 dao.deleteById(successorId)
             }
             reopenInTransaction(result.taskId, c)
             true
         }
-        if (undone) reminderSync.onTasksChanged(setOfNotNull(result.taskId, result.successorId), "undoComplete")
+        if (undone) replan(setOfNotNull(result.taskId, result.successorId), "undoComplete")
         return undone
     }
 
@@ -172,7 +203,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             if (row != null && Recurrence.fromCode(row.recurrence) != Recurrence.NONE) return@withTransaction false
             reopenInTransaction(id, c)
         }
-        if (reopened) reminderSync.onTasksChanged(setOf(id), "reopen")
+        if (reopened) replan(setOf(id), "reopen")
         return reopened
     }
 
@@ -198,7 +229,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             dao.update(updated.toEntity())
             PostponeResult(id, previous, updated.reminderRevision)
         }
-        if (result != null) reminderSync.onTasksChanged(setOf(id), "postpone")
+        if (result != null) replan(setOf(id), "postpone")
         return result
     }
 
@@ -225,7 +256,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             dao.update(updated.toEntity())
             true
         }
-        if (restored) reminderSync.onTasksChanged(setOf(result.taskId), "undoPostpone")
+        if (restored) replan(setOf(result.taskId), "undoPostpone")
         return restored
     }
 
@@ -235,7 +266,7 @@ internal class TaskRepositoryImpl @Inject constructor(
             dao.deleteById(id)
             row
         }
-        if (removed != null) reminderSync.onTasksChanged(setOf(id), "delete")
+        if (removed != null) replan(setOf(id), "delete")
         return removed
     }
 
@@ -248,7 +279,7 @@ internal class TaskRepositoryImpl @Inject constructor(
         )
         // GA-05: never REPLACE. If the id exists again (import, prior restore + edit) this is a no-op.
         val inserted = db.withTransaction { dao.insertIgnore(restored.toEntity()) != -1L }
-        if (inserted) reminderSync.onTasksChanged(setOf(task.id), "undoDelete")
+        if (inserted) replan(setOf(task.id), "undoDelete")
         return inserted
     }
 
@@ -272,7 +303,7 @@ internal class TaskRepositoryImpl @Inject constructor(
                 },
             )
         }
-        reminderSync.resetAll("import")
+        resetReminders("import")
         return ReplaceResult.Replaced(tasks.size)
     }
 
@@ -342,5 +373,9 @@ internal class TaskRepositoryImpl @Inject constructor(
         )
         dao.update(updated.toEntity())
         return true
+    }
+
+    private companion object {
+        const val TAG = "AhoraRepository"
     }
 }

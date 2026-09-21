@@ -110,6 +110,8 @@ class SettingsViewModel @Inject constructor(
         appScope.launch {
             try {
                 val text = BackupCodec.encode(repository.exportAll(), time.now())
+                // Never write a copy AHORA itself would refuse to import: fail visibly instead (GC-09).
+                check(text.length <= BackupCodec.MAX_CHARS) { "backup larger than the import limit" }
                 withContext(Dispatchers.IO) {
                     // "wt": truncate, so overwriting a longer file never leaves a corrupt tail.
                     context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }

@@ -212,9 +212,14 @@ private fun EditorContent(
             val isTomorrow = date == today.plusDays(1)
             val isCustom = date != null && !isToday && !isTomorrow
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DateChip(stringResource(R.string.editor_date_today), isToday) { viewModel.onDate(if (isToday) null else today) }
+                // "Hoy"/"Mañana" are resolved when tapped: a sheet left open past midnight must not save yesterday (GC-13).
+                DateChip(stringResource(R.string.editor_date_today), isToday) {
+                    val now = viewModel.today()
+                    viewModel.onDate(if (date == now) null else now)
+                }
                 DateChip(stringResource(R.string.editor_date_tomorrow), isTomorrow) {
-                    viewModel.onDate(if (isTomorrow) null else today.plusDays(1))
+                    val tomorrow = viewModel.today().plusDays(1)
+                    viewModel.onDate(if (date == tomorrow) null else tomorrow)
                 }
                 DateChip(
                     label = if (isCustom) (DateLabels.of(date, today) as? DateLabel.Other)?.text ?: date.toString()
@@ -368,8 +373,9 @@ private fun ReminderSection(
                     // In context, never up-front: the first time the switch goes on and the dialog can still be shown.
                     if (on && permissions.canAskNotifications && !viewModel.notificationsAsked) onAskNotifications()
                 },
-                stateOn = stringResource(R.string.settings_state_allowed),
-                stateOff = stringResource(R.string.settings_state_not_allowed),
+                label = label,
+                stateOn = stringResource(R.string.switch_state_on),
+                stateOff = stringResource(R.string.switch_state_off),
             )
         }
         if (draft.reminder) {

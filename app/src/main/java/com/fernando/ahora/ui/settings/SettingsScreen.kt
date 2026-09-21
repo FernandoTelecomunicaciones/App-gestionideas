@@ -179,8 +179,9 @@ fun SettingsScreen(
                     AhoraSwitch(
                         checked = state.keepScreenOnInFocus,
                         onCheckedChange = onKeepScreenOn,
-                        stateOn = stringResource(R.string.settings_state_allowed),
-                        stateOff = stringResource(R.string.settings_state_not_allowed),
+                        label = stringResource(R.string.settings_keep_screen_on),
+                        stateOn = stringResource(R.string.switch_state_on),
+                        stateOff = stringResource(R.string.switch_state_off),
                     )
                 }
             }

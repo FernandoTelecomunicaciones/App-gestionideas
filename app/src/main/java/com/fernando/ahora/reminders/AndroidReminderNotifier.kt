@@ -45,7 +45,7 @@ class AndroidReminderNotifier @Inject constructor(
         manager.createNotificationChannel(channel)
     }
 
-    override fun canNotify(): Boolean = manager.areNotificationsEnabled()
+    override fun canNotify(): Boolean = canPostReminders(context)
 
     @SuppressLint("MissingPermission") // guarded explicitly below
     override fun post(task: Task) {
@@ -121,6 +121,18 @@ class AndroidReminderNotifier @Inject constructor(
     }
 
     companion object {
+        /**
+         * App-level notifications on AND the reminders channel not blocked. `areNotificationsEnabled()` alone misses a
+         * channel switched off in system settings: `notify()` is then silently dropped and the reminder would be
+         * consumed with no card, while Ajustes still said "Permitidas" (GC-03). A channel that does not exist yet is
+         * created on the first post, so it counts as usable.
+         */
+        fun canPostReminders(context: Context): Boolean {
+            val manager = NotificationManagerCompat.from(context)
+            if (!manager.areNotificationsEnabled()) return false
+            return manager.getNotificationChannel(CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+        }
+
         const val CHANNEL_ID = "reminders"
         const val TAG = "reminder"
         const val EXTRA_TASK_ID = "com.fernando.ahora.extra.TASK_ID"

@@ -50,6 +50,36 @@ class AndroidRemindersRobolectricTest {
         notifier.ensureChannel()
     }
 
+    // ---- GC-03: a blocked reminders channel is "cannot notify", not "notified" -----------------
+
+    private fun blockChannel() {
+        val nm = context.getSystemService(NotificationManager::class.java)
+        nm.deleteNotificationChannel(AndroidReminderNotifier.CHANNEL_ID)
+        nm.createNotificationChannel(
+            android.app.NotificationChannel(AndroidReminderNotifier.CHANNEL_ID, "Recordatorios", NotificationManager.IMPORTANCE_NONE),
+        )
+    }
+
+    @Test
+    fun aBlockedRemindersChannel_meansCannotNotify_andSettingsSaysSo() {
+        assertTrue(notifier.canNotify())
+        blockChannel()
+        assertFalse(notifier.canNotify())
+        assertFalse(ReminderPermissions(context, scheduler).notificationsGranted())
+        assertFalse(ReminderPermissions(context, scheduler).snapshot().notificationsGranted)
+    }
+
+    @Test
+    fun postingIntoABlockedChannel_isAPermanentFailure_soNothingPretendsToBeDelivered() {
+        blockChannel()
+        try {
+            notifier.post(reminderTask(7))
+            org.junit.Assert.fail("must not silently post into a blocked channel")
+        } catch (_: PermanentNotificationFailure) {
+            // expected: the reconciler consumes the reminder deliberately and Ajustes shows the hint
+        }
+    }
+
     // ---- single alarm cursor: no duplicates, no PendingIntent collisions -------------------
 
     @Test

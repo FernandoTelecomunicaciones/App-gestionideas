@@ -4,6 +4,7 @@ import com.fernando.ahora.domain.model.Priority
 import com.fernando.ahora.domain.model.Recurrence
 import com.fernando.ahora.domain.model.Task
 import com.fernando.ahora.domain.model.TaskFields
+import com.fernando.ahora.domain.rules.TaskRules
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -40,9 +41,10 @@ data class EditorDraft(
     /** The only requirement to save (P-2): a title. Nothing optional can block it. */
     val canSave: Boolean get() = title.isNotBlank()
 
-    fun withTitle(value: String) = copy(title = value)
-    fun withNotes(value: String) = copy(notes = value)
-    fun withList(value: String) = copy(list = value)
+    // Typing stops at the same limits the backup file accepts (GC-09), so an export always re-imports.
+    fun withTitle(value: String) = copy(title = value.take(TaskRules.MAX_TITLE))
+    fun withNotes(value: String) = copy(notes = value.take(TaskRules.MAX_NOTES))
+    fun withList(value: String) = copy(list = value.take(TaskRules.MAX_LIST))
     fun withPriority(value: Priority?) = copy(priority = value?.value)
     /** Repeat needs a date (§4.1); without one only "no repeat" is accepted. */
     fun withRecurrence(value: Recurrence) =

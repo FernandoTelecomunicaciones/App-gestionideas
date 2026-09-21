@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved at the Architecture Gate (2026-09-20); implemented through M10. Amendments §17 (review #2), §18 (Gate B) and §19 (UI) supersede the older body text where they conflict.** |
+| Status | **Approved at the Architecture Gate (2026-09-20); implemented through M10. Amendments §17 (review #2), §18 (Gate B), §19 (UI) and §20 (Gate C) supersede the older body text where they conflict.** |
 | Date | 2026-09-20 |
 | Requirements | [PRODUCT_SPEC.md](PRODUCT_SPEC.md) · Rationale: [DECISIONS.md](DECISIONS.md) (`D-xx`, `OD-x`) |
 
@@ -462,3 +462,23 @@ Rationale and the full deviation table: DECISIONS D-33.
 **Foco.** `FocusViewModel` keeps `[preset, endMillis]` + an "alerted" flag in its `SavedStateHandle`; `remaining = ceil((end − now)/1 s)`; the haptic fires once (`alertPending` → `onAlerted`). Terminar/Posponer run through `TaskActions` and set `leaving`, so the screen closes immediately while the write completes in the application scope.
 
 **Theme.** System/Light/Dark from DataStore; the splash is held until the first read (`themeMode == null`), system-bar styles and the window background follow the resolved theme.
+
+## 20. Amendments from Codex Gate C (normative — supersede earlier text where they conflict)
+
+Source: Gate C findings GC-01…GC-13, triaged in DECISIONS.md › "Gate C" and D-34.
+
+**GC-04 Supported dates.** `dueDate` and `recurrenceAnchor` must lie in `TaskRules.MIN_DATE … MAX_DATE` (1900-01-01 … 2200-12-31, a superset of the editor's picker). Import rejects anything outside; `normalize` drops an out-of-range date with its dependents. Reason: `Instant.toEpochMilli()` (alarm arming) and `plusDays` (recurrence) overflow far outside it.
+
+**GC-09 Shared text limits.** `TaskRules.MAX_TITLE/MAX_NOTES/MAX_LIST` (1 000 / 20 000 / 200) bind every write path *and* the backup codec; the editor and quick capture stop typing at them and `normalize` truncates as a backstop. Export refuses to write a file larger than the import limit (8 MiB), so a copy AHORA writes is a copy AHORA can read.
+
+**GC-05 Commit versus re-plan (amends R2-3).** The repository still awaits the re-plan after a commit, but a *failure* of that re-plan is logged and swallowed: the row is committed, the alarm is a rebuildable cache and the next receiver/app start reconciles. Cancellation still propagates. Every write launched from `TaskActions` in the (handler-less) application scope is wrapped: a failure becomes the generic "No se pudo guardar" message, never an uncaught exception.
+
+**GC-06 Undo of a completion (extends GB-04).** `undoComplete` also refuses when the generated successor has been edited since (`updatedAt != createdAt`).
+
+**GC-03 Notification capability.** "Can notify" = app-level notifications enabled **and** the `reminders` channel not `IMPORTANCE_NONE` (`AndroidReminderNotifier.canPostReminders`, used by the notifier, the permission snapshot and therefore the Ajustes/editor hints). A missing channel counts as usable (it is created on first post).
+
+**GC-07 / GC-13 Editor.** `EditorViewModel.openEdit` keeps its one pending read and cancels it on any later `openEdit`/`openNew`/`dismiss`. The Hoy/Mañana chips read the date when tapped.
+
+**GC-08 Switch.** `AhoraSwitch` takes a `label` (its accessible name) and state words "Activado/Desactivado".
+
+**Accepted residuals (not changed):** the check-then-cancel window of a stale action against a just-posted newer card (GB-01/GC-02 — closing it needs revision-specific notification identity); partial file after a failed SAF export (GC-10).
