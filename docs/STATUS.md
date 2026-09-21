@@ -1,8 +1,8 @@
 # AHORA — Status
 
-**Checkpoint: 2026-09-21 — release prerequisites (pre-Gate-D).** Branch `claude-pruebas` · HEAD `a8dcd8a` (Gate C fixes, committed) · **this session's release-prerequisite work is in the working tree, uncommitted** (§6). Gate D has **not** been started. No product behaviour was changed.
+**Checkpoint: 2026-09-21 — signed-release validation done (pre-Gate-D).** Branch `claude-pruebas` · HEAD `e4eb933` ("chore: prepare AHORA 0.1.0 release", committed; the working tree was clean when the signed build was tested) · **the production-signed 0.1.0 APK passed the full signed-release smoke: 15 / 15, 0 failures** (§4). Gate D has **not** been started. No product behaviour was changed.
 
-> **Read this first:** the app is usable end to end (Hoy, Bandeja + quick capture, Tareas, create/edit sheet, Foco, Ajustes, themes, JSON export/import, reminder permission UX, notification navigation cold and warm). Gate C is approved. **This session (release validation):** versioning `0.1.0` / `1` and *optional* release signing are wired (D-35); the CI workflow was fixed and checked as far as it can be locally; a repeatable device matrix (`scripts/device_matrix.py`) is **green on Android 8, 12, 13, 14 and 16 emulators** (§4); an accessibility audit found and fixed one defect (D-36); the R8 release build was smoke-tested through the real UI with a debug key (rehearsal). **What is *not* done:** the **production keystore and the signed-release test** (the owner supplies the key, [RELEASE.md](RELEASE.md) §2), **any physical device**, the **first GitHub Actions run**, a **full manual TalkBack pass**, screenshot tests.
+> **Read this first:** the app is usable end to end (Hoy, Bandeja + quick capture, Tareas, create/edit sheet, Foco, Ajustes, themes, JSON export/import, reminder permission UX, notification navigation cold and warm). Gate C is approved. **This session (release validation):** versioning `0.1.0` / `1` and *optional* release signing are wired (D-35); the CI workflow was fixed and checked as far as it can be locally; a repeatable device matrix (`scripts/device_matrix.py`) is **green on Android 8, 12, 13, 14 and 16 emulators** (§4); an accessibility audit found and fixed one defect (D-36); the R8 release build was smoke-tested through the real UI with a debug key (rehearsal). **Since then the owner configured the production keystore, the signed `app-release.apk` was built, its signer matches the owner's expected fingerprint, and the signed-release smoke passed on the API 36 emulator (§4).** **What is *not* done:** **any physical device**, the **first GitHub Actions run**, a **full manual TalkBack pass**, screenshot tests.
 
 ## 1. Last verified build (final pre-Gate-D run, forced re-run with `--rerun-tasks`, 2026-09-21)
 
@@ -56,7 +56,7 @@ Each Gate C fix was mutation-checked: reverting it makes its regression test fai
 | M9 | Notifications | ✅ + navigation: body → Hoy, ABRIR → Foco, `[Home, Focus]`, cold and warm (device-verified with real touches) |
 | **M10** | Ajustes / theme / data | ✅ (permissions, Sistema/Claro/Oscuro persisted, keep-screen-on, JSON export/import, privacy line) |
 | M11 | Hardening | ⬜ |
-| M12 | Release readiness | ◐ version `0.1.0`/`1`, optional signing wiring, CI fixes, device-matrix + release-smoke scripts, [RELEASE.md](RELEASE.md) are done. **Still open:** the owner's production keystore, the signed-release test, a physical device, the first CI run. |
+| M12 | Release readiness | ◐ version `0.1.0`/`1`, signing wiring, CI fixes, device-matrix + release-smoke scripts, [RELEASE.md](RELEASE.md), **production keystore + production-signed APK + signed-release smoke (15/15 on API 36)** are done. **Still open:** a physical device, the manual TalkBack pass, the first CI run. |
 
 ## 3. Codex review gates
 
@@ -93,6 +93,43 @@ Everything from the previous checkpoint still stands (engine behaviours). **New 
 | Accessibility tree of the Ajustes "Mantener pantalla encendida" switch | checkable node + a labelled child node — the same structure the labelled checkboxes have. **Not** verified with TalkBack. |
 | Final debug build: launch, FAB opens the sheet, typing works, system back closes it | ✔ (smoke only) |
 
+### Signed-release validation (2026-09-21) — production key, `scripts/release_smoke.py`
+
+The owner configured the production keystore (kept outside the repository; `keystore.properties` is git-ignored; no password was read, printed or copied). `assembleRelease` produced the **signed** APK; it was verified and then installed and driven on the API 36 emulator.
+
+| Item | Value |
+|---|---|
+| APK | `app/build/outputs/apk/release/app-release.apk` (not `-unsigned`) |
+| Size | **2,381,082 bytes (2.27 MiB / 2.4 MB)** |
+| File SHA-256 | `5db1a1c1bb973f2c46f98f5a692994c61ad8c4e6a23ec28d1a7493374acb3e36` (the APK pulled back from the emulator's `base.apk` is byte-identical) |
+| `apksigner verify --print-certs -v` | `Verifies` · v2 **true** · v1/v3/v3.1/v4 false (minSdk 26: v2 is enough) · 1 signer |
+| Signer | `CN=Fernando, OU=Fernando, O=Fernando, L=Madrid, ST=Espa?a, C=ES` · RSA 4096 (not `CN=Android Debug`) |
+| **Signer certificate SHA-256** | **`90:AB:1E:3F:1F:7B:DD:9D:5C:DC:5A:71:60:F3:41:80:1A:A7:8E:E8:87:5E:C2:15:41:C7:5F:A3:6F:D2:6B:FC`** — compared programmatically against the owner's expected fingerprint: **match** |
+| Version | `versionName 0.1.0`, `versionCode 1` (`output-metadata.json` and the installed package agree) |
+| Installed flags | not debuggable · no `INTERNET` · no debug receiver · minSdk 26 · targetSdk 36 |
+
+**Smoke result (API 36 emulator `sdk_gphone64_x86_64`, real UI only, real alarms, ~30 min): PASS — 15 pass, 0 fail.**
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `signature` — verifies, v2, signer + SHA-256 printed | ✅ |
+| 2 | `installed_metadata` — 0.1.0 (1), not debuggable, no `INTERNET`, no debug receiver | ✅ |
+| 3 | `launch` — Hoy shown | ✅ |
+| 4 | `capture_persistence` — listed; survives force-stop; survives process death | ✅ |
+| 5 | `edit` — title edited and saved | ✅ |
+| 6 | `hoy_foco` — created → Ahora card → Foco + clock → Terminar | ✅ |
+| 7 | `reminders_created` — four reminders through the editor and the time dial (A 16:40, B 16:45, C 16:50, D 16:55; device time 16:29) | ✅ |
+| 8 | `reminder_A_delivery` — process dead; body `Vence a las 4:40 p. m.`; actions HECHO · +10 MIN · ABRIR | ✅ |
+| 9 | `action_ABRIR_cold` — Foco opened for the task; Terminar completed it | ✅ |
+| 10 | `action_HECHO` — card dismissed, task done | ✅ |
+| 11 | `action_MAS10` — card dismissed, task still open | ✅ |
+| 12 | `reboot` — alarm re-armed with the app never opened; D delivered after boot | ✅ |
+| 13 | `action_body_cold` — body tap after reboot (cold process) opened Hoy | ✅ |
+| 14 | `snooze_redelivery` — the +10 MIN reminder was really re-delivered and completed | ✅ |
+| 15 | `no_crash` — no `FATAL EXCEPTION` in the crash log for the whole run | ✅ |
+
+Not rerun: nothing failed. Scope of this evidence: **one emulator (Android 16), the production key, the R8 build.** It is not physical-device evidence. The smoke script uninstalls any previous copy first, so the data on the emulator was wiped (debug → production signature differs).
+
 ### Release-validation session (2026-09-21) — device matrix, accessibility, Gate C re-checks
 
 **Device/API matrix.** `scripts/device_matrix.py` (D-36, procedure in [RELEASE.md](RELEASE.md) §4), **debug** APK, five emulators run in parallel, one clean run of the final script. **Result: 0 failures on every device** (pass/fail/skip: API 26 = 14/0/3, API 31 = 15/0/2, API 33 = 17/0/0, API 34 = 17/0/0, API 36 = 17/0/0; the skips are checks that do not exist below that API level).
@@ -114,7 +151,7 @@ Everything from the previous checkpoint still stands (engine behaviours). **New 
 
 All devices are Google APIs x86_64 emulators (Pixel 5 profile, 1080×2400, 420 dpi). **No physical device was connected (`adb devices` listed only emulators): nothing here is physical-device verified.**
 
-**R8 release smoke — rehearsal, debug-signed, NOT the final signed-release test** (`scripts/release_smoke.py`, real UI only, no debug hook; API 36 emulator: **15 pass, 0 fail**; an earlier run on API 34 passed everything except two checks that a bug in the script itself mis-read, fixed and re-run on API 36). Covered on the R8 APK: signature verifies (v2) and the signer is printed; installed `0.1.0 (1)`, not debuggable, no `INTERNET`, no debug receiver; launch; capture; persistence after force-stop *and* after process death; edit; Hoy → Foco → Terminar; **four real reminders created through the editor and the time dial**; delivery with the process dead (body + three actions); ABRIR from a dead process → Foco → Terminar; HECHO; +10 MIN; **reboot with the app never reopened → alarm re-armed → delivered → body tap on the cold process opens Hoy**; the snoozed reminder **really came back** ~10 min later; no `FATAL EXCEPTION` for the whole run. Not covered: a *signed-with-the-production-key* run (no key), a physical device.
+**R8 release smoke — rehearsal, debug-signed, NOT the final signed-release test** (`scripts/release_smoke.py`, real UI only, no debug hook; API 36 emulator: **15 pass, 0 fail**; an earlier run on API 34 passed everything except two checks that a bug in the script itself mis-read, fixed and re-run on API 36). Covered on the R8 APK: signature verifies (v2) and the signer is printed; installed `0.1.0 (1)`, not debuggable, no `INTERNET`, no debug receiver; launch; capture; persistence after force-stop *and* after process death; edit; Hoy → Foco → Terminar; **four real reminders created through the editor and the time dial**; delivery with the process dead (body + three actions); ABRIR from a dead process → Foco → Terminar; HECHO; +10 MIN; **reboot with the app never reopened → alarm re-armed → delivered → body tap on the cold process opens Hoy**; the snoozed reminder **really came back** ~10 min later; no `FATAL EXCEPTION` for the whole run. Not covered by this rehearsal: a *signed-with-the-production-key* run (**since done, see "Signed-release validation" above: 15/15**), a physical device.
 
 **Accessibility.**
 - **Real TalkBack** (the image ships it) was run on the API 36 emulator. Confirmed by its own speech output: the settings icon is announced *"Ajustes, Button, Double-tap to activate"*; the title and notes fields are announced *"Editing, Edit box"* + their placeholder (so they are named); the *"Tarea completada"* / *"Deshacer"* snackbar is announced as an alert; the date picker announces *"Current selection: Tuesday, September 22, 2026"*. Driving TalkBack with adb gestures (swipe-to-next) was **not reliable**, so a full linear reading-order pass with TalkBack was **not** done — the manual 10-minute checklist is in [RELEASE.md](RELEASE.md) §6.
@@ -127,7 +164,7 @@ All devices are Google APIs x86_64 emulators (Pixel 5 profile, 1080×2400, 420 d
 
 ### ⬜ NOT verified (do not treat as working)
 - **Any physical device**, OEM battery behaviour, reboot *before first unlock* (direct boot), device-transfer restore (A9), exact-alarm revoke/re-grant through the real system screen, blocked reminders channel on a device (JVM/Robolectric only), TIME_SET/zone/DST on a real alarm.
-- **The production-signed release** (no key yet) and the **CI workflow on GitHub** (never run; it also has never run on Linux).
+- The **CI workflow on GitHub** (never run; it also has never run on Linux). The production-signed release *is* now verified on the API 36 emulator only (see "Signed-release validation"); on other Android versions and on hardware the signed APK has not been run (the R8 build was run on API 34 as a rehearsal, debug-signed).
 - Whether a *genuinely granted* exact-alarm permission survives a reboot: in the tests the grant was made with `adb shell appops set`, and after a reboot the app-op read `default` (denied on Android 14+), so post-reboot reminders were armed in the designed degraded mode (inexact) and still arrived. That is a property of the harness, not proof about the real Ajustes → system-screen grant.
 - A full manual TalkBack pass (linear reading order of every screen); keyboard/D-pad focus rings; contrast measured on rendered screens; predictive back for the sheet; 200 % font in landscape (only Foco was checked there).
 - Gate C fixes with no device evidence: Hoy/Mañana at midnight, export/import of an at-limit file on the device.
@@ -149,19 +186,20 @@ All devices are Google APIs x86_64 emulators (Pixel 5 profile, 1080×2400, 420 d
 8. Lint warnings (10, none blocking): 5 `UnusedResources` (Lucide icons `chevron-down/up`, `x`, `search`, `trash-2` bundled for the design set but not used by any screen), 2 `UseKtx`, `OldTargetApi` (targetSdk 36 vs 37), `ExportedReceiver` (debug-only command receiver), `ObsoleteSdkInt` (`mipmap-anydpi-v26`).
 9. `PRODUCT_SPEC.md` still says "Draft v1"; its requirements were followed as written (deviations: DECISIONS D-33).
 10. Gate C residuals **accepted, not fixed**: the check-then-cancel window of a stale action against a just-posted newer card (GC-02: needs revision-specific notification ids); a failed SAF export can leave a partial file in the document the user chose (GC-10); no Activity-level/instrumented test of `MainActivity` link handling or of receiver deadlines (GC-11 — verified on the device instead).
-11. From the previous checkpoint and unchanged: Robolectric runs at SDK 34 while `targetSdk` is 36; `./gradlew clean` can fail on Windows while a shell holds `app/build/test-results` as cwd; residual GB-01 window; `DebugCommandReceiver` is debug-only (verified absent from the installed release). Release versioning/signing is now wired (D-35) but no production key exists yet. On Android 14+ a fresh install has **exact alarms denied** (D-07): reminders still arrive (69–73 s after creation for a reminder due ≤ 60 s ahead in the emulator test), but with best-effort timing until the user grants "Alarmas exactas" in Ajustes.
+11. From the previous checkpoint and unchanged: Robolectric runs at SDK 34 while `targetSdk` is 36; `./gradlew clean` can fail on Windows while a shell holds `app/build/test-results` as cwd; residual GB-01 window; `DebugCommandReceiver` is debug-only (verified absent from the installed release). Release versioning/signing is wired (D-35) and the owner's production key now signs the release APK (fingerprint in §4). On Android 14+ a fresh install has **exact alarms denied** (D-07): reminders still arrive (69–73 s after creation for a reminder due ≤ 60 s ahead in the emulator test), but with best-effort timing until the user grants "Alarmas exactas" in Ajustes.
 
 ## 6. Git state
 
-Branch `claude-pruebas`, HEAD `a8dcd8a` ("fix: harden AHORA after Codex Gate C" — the Gate C fixes are committed). **This session's work is uncommitted.** Working tree: modified `.github/workflows/build.yml`, `.gitignore`, `app/build.gradle.kts` (signing wiring; version already `0.1.0`/`1`), `ui/editor/EditorSheet.kt` (drag-handle a11y fix), `docs/DECISIONS.md` (D-35, D-36), `docs/STATUS.md`; new `docs/RELEASE.md`, `scripts/device_matrix.py`, `scripts/release_smoke.py`. Build, 323 tests, lint (0 errors) and the release build are green on exactly this tree, so it is a clean point for a commit — I have not made one, and **no git tag exists**. Note for the commit: `gradlew` is tracked with mode `100644`; the workflow works around it with `chmod +x`, but `git update-index --chmod=+x gradlew` is the permanent fix.
+Branch `claude-pruebas`, HEAD `e4eb933` ("chore: prepare AHORA 0.1.0 release"), which contains the release-prerequisite work (signing wiring, CI fixes, drag-handle a11y fix, D-35/D-36, RELEASE.md, both scripts) on top of the Gate C fixes (`a8dcd8a`). The working tree was **clean** when the signed APK was built and smoke-tested, so the tested APK corresponds to `e4eb933`. The only change since is this `docs/STATUS.md` update, **uncommitted** — I have not committed anything, and **no git tag exists**. `keystore.properties` and the `.jks` are git-ignored / outside the repository and never enter a commit. Note: `gradlew` is tracked with mode `100644`; the workflow works around it with `chmod +x`, but `git update-index --chmod=+x gradlew` is the permanent fix.
 
 ## 7. Before Gate D / an APK release
 
-Done this session: version `0.1.0`/`1` and its policy (D-35) · optional signing wiring, verified unsigned / partial / full with the debug key · CI workflow fixed and simulated · device matrix green on API 26, 31, 33, 34, 36 · accessibility audit, one defect fixed · R8 release smoke through the real UI (rehearsal).
+Done: version `0.1.0`/`1` and its policy (D-35) · signing wiring · CI workflow fixed and simulated · device matrix green on API 26, 31, 33, 34, 36 · accessibility audit, one defect fixed · **production keystore configured by the owner, signed APK built, signer SHA-256 matches the expected fingerprint, signed-release smoke 15/15 on the API 36 emulator** (§4).
 
 Still open — **these are the items blocking Gate D / a public APK:**
-1. **The owner's production keystore** ([RELEASE.md](RELEASE.md) §2) and, once it exists, the **signed-release test**: `scripts/release_smoke.py` on an emulator and, if available, a phone. A debug-signed run does not count.
-2. **A physical device**: matrix + release smoke + OEM battery behaviour + reboot before first unlock (none has been run on real hardware).
-3. **A manual TalkBack pass** on a phone at 100 % and 200 % font ([RELEASE.md](RELEASE.md) §6) — A11Y-04/05 are acceptance requirements and only partially evidenced.
-4. **The first GitHub Actions run** (never run; also never run on Linux) — push, then read the result.
+1. **A physical device**: matrix + release smoke (`--skip-reboot` if it has a lock screen, then the reboot step by hand) + OEM battery behaviour + reboot before first unlock (none has been run on real hardware). Optionally, the signed APK on the other emulators (API 26/31/33/34) for signed-build coverage beyond API 36.
+2. **A manual TalkBack pass** on a phone at 100 % and 200 % font ([RELEASE.md](RELEASE.md) §6) — A11Y-04/05 are acceptance requirements and only partially evidenced.
+3. **The first GitHub Actions run** (never run; also never run on Linux) — push, then read the result.
+4. **Owner decisions, not blockers of evidence:** whether to run Gate D; the `v0.1.0` tag (RELEASE.md §7: only after the items above and Gate D are decided).
 5. Optional hardening: screenshot tests; Activity-level tests for cold/warm/restored notification entry.
+6. **Key custody:** the `.jks` and both passwords must be backed up in two places (RELEASE.md §2); losing the key makes in-place updates impossible.
