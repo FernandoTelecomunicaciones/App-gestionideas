@@ -1,4 +1,5 @@
 import java.time.Duration
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -8,6 +9,34 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+}
+
+// Release signing (DECISIONS D-35). The production keystore is NEVER in the repo. It is supplied either by
+// `keystore.properties` at the repository root (git-ignored) or by environment variables, and only for the
+// release build. With neither, `assembleRelease` still builds (unsigned), so CI needs no secrets to compile.
+//   keystore.properties: storeFile=..., storePassword=..., keyAlias=..., keyPassword=...
+//   environment:         AHORA_KEYSTORE_FILE, AHORA_KEYSTORE_PASSWORD, AHORA_KEY_ALIAS, AHORA_KEY_PASSWORD
+// Providers (not plain File reads) so the configuration cache tracks the file and the variables as inputs.
+val signingFile = providers.fileContents(rootProject.layout.projectDirectory.file("keystore.properties"))
+val signingProps = Properties().apply { signingFile.asText.orNull?.let { load(it.reader()) } }
+fun signingValue(propertyName: String, envName: String): String? =
+    (signingProps.getProperty(propertyName) ?: providers.environmentVariable(envName).orNull)
+        ?.trim()?.takeIf { it.isNotEmpty() }
+
+val releaseStoreFile = signingValue("storeFile", "AHORA_KEYSTORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "AHORA_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "AHORA_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "AHORA_KEY_PASSWORD")
+val releaseSigningValues = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+val hasReleaseSigning = releaseSigningValues.all { it != null }
+// Half a configuration is a mistake, not "no signing": fail loudly instead of shipping an unsigned APK by accident.
+// (Names only; a value is never printed.)
+if (!hasReleaseSigning && releaseSigningValues.any { it != null }) {
+    throw GradleException(
+        "Release signing is partly configured. Provide all of storeFile, storePassword, keyAlias, keyPassword " +
+            "(keystore.properties) or AHORA_KEYSTORE_FILE, AHORA_KEYSTORE_PASSWORD, AHORA_KEY_ALIAS, " +
+            "AHORA_KEY_PASSWORD - or none of them for an unsigned build.",
+    )
 }
 
 android {
@@ -20,13 +49,26 @@ android {
         applicationId = "com.fernando.ahora"
         minSdk = 26
         targetSdk = 36
+        // Release policy: DECISIONS D-35. versionCode only ever goes up (+1 per distributed build, never reused).
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

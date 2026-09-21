@@ -123,10 +123,13 @@ fun EditorSheet(viewModel: EditorViewModel) {
         contentColor = c.text,
         scrimColor = c.scrim,
         tonalElevation = 0.dp,
-        dragHandle = {
-            Box(Modifier.padding(top = 12.dp, bottom = 6.dp).size(width = 36.dp, height = 4.dp).background(c.divider))
-        },
+        dragHandle = null,
     ) {
+        // Drawn here, not through `dragHandle`: M3 wraps that slot in a clickable node that TalkBack reaches as an
+        // unlabelled 48x35 dp "button" (release-validation a11y audit). The whole sheet still drags and dismisses.
+        Box(Modifier.fillMaxWidth().height(35.dp), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.padding(top = 12.dp).size(width = 36.dp, height = 4.dp).background(c.divider))
+        }
         EditorContent(
             draft = draft,
             viewModel = viewModel,
